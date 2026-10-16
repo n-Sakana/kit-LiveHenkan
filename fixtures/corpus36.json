@@ -1,0 +1,218 @@
+[
+  {
+    "id": 1,
+    "domain": "IT",
+    "reading": "さーばーをさいきどうする",
+    "expected": "サーバーを再起動する"
+  },
+  {
+    "id": 2,
+    "domain": "IT",
+    "reading": "でーたべーすにせつぞくする",
+    "expected": "データベースに接続する"
+  },
+  {
+    "id": 3,
+    "domain": "IT",
+    "reading": "ねっとわーくのせっていをかくにんする",
+    "expected": "ネットワークの設定を確認する"
+  },
+  {
+    "id": 4,
+    "domain": "IT",
+    "reading": "ぱすわーどをへんこうしてください",
+    "expected": "パスワードを変更してください"
+  },
+  {
+    "id": 5,
+    "domain": "IT",
+    "reading": "ふぁいるをほぞんする",
+    "expected": "ファイルを保存する"
+  },
+  {
+    "id": 6,
+    "domain": "IT",
+    "reading": "えらーろぐをかくにんする",
+    "expected": "エラーログを確認する"
+  },
+  {
+    "id": 7,
+    "domain": "IT",
+    "reading": "ぷろぐらむをじっこうする",
+    "expected": "プログラムを実行する"
+  },
+  {
+    "id": 8,
+    "domain": "IT",
+    "reading": "ばっくあっぷをふくげんする",
+    "expected": "バックアップを復元する"
+  },
+  {
+    "id": 9,
+    "domain": "IT",
+    "reading": "そーすこーどをしゅうせいする",
+    "expected": "ソースコードを修正する"
+  },
+  {
+    "id": 10,
+    "domain": "IT",
+    "reading": "あくせすけんげんをへんこうする",
+    "expected": "アクセス権限を変更する"
+  },
+  {
+    "id": 11,
+    "domain": "IT",
+    "reading": "くらうどかんきょうをこうちくする",
+    "expected": "クラウド環境を構築する"
+  },
+  {
+    "id": 12,
+    "domain": "IT",
+    "reading": "あぷりけーしょんをこうしんする",
+    "expected": "アプリケーションを更新する"
+  },
+  {
+    "id": 13,
+    "domain": "IT",
+    "reading": "つうしんがたいむあうとしました",
+    "expected": "通信がタイムアウトしました"
+  },
+  {
+    "id": 14,
+    "domain": "IT",
+    "reading": "にんしょうにしっぱいしました",
+    "expected": "認証に失敗しました"
+  },
+  {
+    "id": 15,
+    "domain": "IT",
+    "reading": "きゃっしゅをさくじょしてください",
+    "expected": "キャッシュを削除してください"
+  },
+  {
+    "id": 16,
+    "domain": "IT",
+    "reading": "せきゅりてぃたいさくをきょうかする",
+    "expected": "セキュリティ対策を強化する"
+  },
+  {
+    "id": 17,
+    "domain": "IT",
+    "reading": "かそうましんをきどうする",
+    "expected": "仮想マシンを起動する"
+  },
+  {
+    "id": 18,
+    "domain": "IT",
+    "reading": "かいはつかんきょうをせいびする",
+    "expected": "開発環境を整備する"
+  },
+  {
+    "id": 19,
+    "domain": "administration",
+    "reading": "しんせいしょをていしゅつする",
+    "expected": "申請書を提出する"
+  },
+  {
+    "id": 20,
+    "domain": "administration",
+    "reading": "じゅうみんひょうのうつしをこうふする",
+    "expected": "住民票の写しを交付する"
+  },
+  {
+    "id": 21,
+    "domain": "administration",
+    "reading": "ほんにんかくにんしょるいをていじする",
+    "expected": "本人確認書類を提示する"
+  },
+  {
+    "id": 22,
+    "domain": "administration",
+    "reading": "ほじょきんのこうふをしんせいする",
+    "expected": "補助金の交付を申請する"
+  },
+  {
+    "id": 23,
+    "domain": "administration",
+    "reading": "のうぜいつうちしょをそうふする",
+    "expected": "納税通知書を送付する"
+  },
+  {
+    "id": 24,
+    "domain": "administration",
+    "reading": "てつづきにひつようなしょるい",
+    "expected": "手続きに必要な書類"
+  },
+  {
+    "id": 25,
+    "domain": "administration",
+    "reading": "きげんまでにごていしゅつください",
+    "expected": "期限までにご提出ください"
+  },
+  {
+    "id": 26,
+    "domain": "administration",
+    "reading": "じゅうしょへんこうのとどけで",
+    "expected": "住所変更の届出"
+  },
+  {
+    "id": 27,
+    "domain": "administration",
+    "reading": "かんけいきかんときょうぎする",
+    "expected": "関係機関と協議する"
+  },
+  {
+    "id": 28,
+    "domain": "administration",
+    "reading": "ほんけんについてけんとうする",
+    "expected": "本件について検討する"
+  },
+  {
+    "id": 29,
+    "domain": "administration",
+    "reading": "じっしようりょうにもとづきしんさする",
+    "expected": "実施要領に基づき審査する"
+  },
+  {
+    "id": 30,
+    "domain": "administration",
+    "reading": "こじんじょうほうのとりあつかい",
+    "expected": "個人情報の取扱い"
+  },
+  {
+    "id": 31,
+    "domain": "administration",
+    "reading": "よさんのはんいないでしっこうする",
+    "expected": "予算の範囲内で執行する"
+  },
+  {
+    "id": 32,
+    "domain": "administration",
+    "reading": "ぎじろくをさくせいする",
+    "expected": "議事録を作成する"
+  },
+  {
+    "id": 33,
+    "domain": "administration",
+    "reading": "しょうめいしょのはっこうをいらいする",
+    "expected": "証明書の発行を依頼する"
+  },
+  {
+    "id": 34,
+    "domain": "administration",
+    "reading": "しんせいないようにふびがあります",
+    "expected": "申請内容に不備があります"
+  },
+  {
+    "id": 35,
+    "domain": "administration",
+    "reading": "てすうりょうをおしはらいください",
+    "expected": "手数料をお支払いください"
+  },
+  {
+    "id": 36,
+    "domain": "administration",
+    "reading": "きさいじこうをごかくにんください",
+    "expected": "記載事項をご確認ください"
+  }
+]

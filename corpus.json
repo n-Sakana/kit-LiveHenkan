@@ -1,0 +1,72 @@
+﻿[
+  {
+    "id": 1,
+    "romaji": "sa-ba-wosaikidousuru",
+    "reading": "さーばーをさいきどうする",
+    "expected": "サーバーを再起動する",
+    "domain": "IT"
+  },
+  {
+    "id": 2,
+    "romaji": "de-tabe-sunisetsuzokusuru",
+    "reading": "でーたべーすにせつぞくする",
+    "expected": "データベースに接続する",
+    "domain": "IT"
+  },
+  {
+    "id": 3,
+    "romaji": "fairuwohozonsuru",
+    "reading": "ふぁいるをほぞんする",
+    "expected": "ファイルを保存する",
+    "domain": "IT"
+  },
+  {
+    "id": 4,
+    "romaji": "so-suko-dowoshuuseisuru",
+    "reading": "そーすこーどをしゅうせいする",
+    "expected": "ソースコードを修正する",
+    "domain": "IT"
+  },
+  {
+    "id": 5,
+    "romaji": "akusesukenngennwohenkousuru",
+    "reading": "あくせすけんげんをへんこうする",
+    "expected": "アクセス権限を変更する",
+    "domain": "IT"
+  },
+  {
+    "id": 6,
+    "romaji": "shinseishowoteishutsusuru",
+    "reading": "しんせいしょをていしゅつする",
+    "expected": "申請書を提出する",
+    "domain": "administration"
+  },
+  {
+    "id": 7,
+    "romaji": "tetsudukinihitsuyounashorui",
+    "reading": "てつづきにひつようなしょるい",
+    "expected": "手続きに必要な書類",
+    "domain": "administration"
+  },
+  {
+    "id": 8,
+    "romaji": "kigenmadenigoteishutsukudasai",
+    "reading": "きげんまでにごていしゅつください",
+    "expected": "期限までにご提出ください",
+    "domain": "administration"
+  },
+  {
+    "id": 9,
+    "romaji": "gijirokuwosakuseisuru",
+    "reading": "ぎじろくをさくせいする",
+    "expected": "議事録を作成する",
+    "domain": "administration"
+  },
+  {
+    "id": 10,
+    "romaji": "kisaijikouwogokakuninnkudasai",
+    "reading": "きさいじこうをごかくにんください",
+    "expected": "記載事項をご確認ください",
+    "domain": "administration"
+  }
+]

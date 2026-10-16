@@ -1,0 +1,17 @@
+<!doctype html><meta charset="utf-8"><title>LH||END</title>
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'">
+<style>
+body{font:16px "Yu Gothic UI",sans-serif;background:#eef2f5;margin:40px}
+textarea{width:90%;height:150px;font:20px "Yu Gothic UI",sans-serif}
+input{width:90%;font:16px "Yu Gothic UI",sans-serif;padding:6px}
+#rich{width:90%;min-height:80px;background:#fff;border:1px solid #99a;padding:8px;font:18px "Meiryo",sans-serif}
+</style>
+<p>Local test fields. No network, saving, or submission.</p>
+<textarea id="target" autofocus spellcheck="false" autocomplete="off"></textarea>
+<p><input id="line" spellcheck="false" autocomplete="off"></p>
+<div id="rich" contenteditable="true" spellcheck="false"></div>
+<script>
+// The focused field's text is mirrored into the window title, so a test can read it without accessibility APIs.
+function mirror(){var a=document.activeElement;var v=a&&a.id==='rich'?a.innerText:(a&&'value' in a?a.value:'');document.title='LH|'+(a?a.id:'')+'|'+v.replace(/\n/g,'\\n')+'|END';}
+document.addEventListener('input',mirror);document.addEventListener('focusin',mirror);window.addEventListener('load',mirror);
+</script>
