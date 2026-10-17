@@ -62,7 +62,7 @@ try{
  # Uninstall while running must stop it too.
  $null=Start-Process -FilePath (Join-Path $env:SystemRoot 'System32\wscript.exe') -ArgumentList ('"'+(Join-Path $Root 'app\LiveHenkan.vbs')+'" on') -PassThru -WindowStyle Hidden
  Check 'resident answers again' ((Wait-Ping $true 40000) -ge 0)
- $out=& $ps -NoLogo -NoProfile -ExecutionPolicy Bypass -File (Join-Path $Root 'app\uninstall.ps1') 2>&1|Out-String
+ $out=& $ps -NoLogo -NoProfile -ExecutionPolicy Bypass -File (Join-Path $Root 'app\uninstall.ps1') -KeyName LiveHenkan 2>&1|Out-String
  Check 'uninstall exit code' ($LASTEXITCODE -eq 0) $out.Trim().Replace("`r`n",' / ')
  Check 'nothing registered after uninstall' ((Registered).Count -eq 0)
  Check 'uninstall stopped the resident' ((Wait-Ping $false 8000) -ge 0)
