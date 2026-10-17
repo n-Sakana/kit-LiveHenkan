@@ -31,18 +31,25 @@ namespace Henkan {
   static readonly Regex identifier=Rx(@"(?:ID|識別子|番号|型番|品番|コード|パス|URL|ファイル名|バージョン|比率|スコア|得点)(?:は|が|を|の)?[\s:=#]*$");
   const string Left=@"(?<![0-9A-Za-z_./,:+\-])";
   const string Week=@"(?:\([日月火水木金土](?:曜日)?\))?";
-  const string DateEnd=@"(?![0-9A-Za-z_./\-]|\()";
-  static readonly Regex fullDate=Rx(Left+@"(?<y>[0-9]{4})(?:/(?<m>[0-9]{1,2})/(?<d>[0-9]{1,2})|-(?<m>[0-9]{1,2})-(?<d>[0-9]{1,2})|年(?<m>[0-9]{1,2})月(?<d>[0-9]{1,2})日)"+Week+DateEnd);
-  static readonly Regex monthDate=Rx(@"(?<![0-9A-Za-z_年月])(?<m>[0-9]{1,2})月(?<d>[0-9]{1,2})日"+Week+DateEnd);
+  // One match owns the whole date, including invalid years/days: never format
+  // just the month/day tail of an invalid full date or an identifier.
+  static readonly Regex date=Rx(@"(?<![0-9A-Za-z_./,:+\-・･年月])(?:"
+   +@"(?<y>[0-9]{4})(?<sep>[/\-])(?<m>[0-9]{1,2})\k<sep>(?<d>[0-9]{1,2})"
+   +@"|(?<m>[0-9]{1,2})(?<sep>[/・･])(?<d>[0-9]{1,2})"
+   +@"|(?:(?<y>[0-9]{4})年)?(?<m>[0-9]{1,2})(?<jp>月)(?<d>[0-9]{1,2})日)"
+   +Week+@"(?![0-9A-Za-z_./\-・･年月]|\()");
   static readonly Regex colonTime=Rx(Left+@"(?<h>[0-9]{1,2}):(?<m>[0-9]{2})(?![0-9A-Za-z_:])");
   static readonly Regex japaneseTime=Rx(Left+@"(?<ap>午前|午後)?(?<h>[0-9]{1,2})時(?:(?<half>半)|(?<m>[0-9]{1,2})分)?(?![0-9A-Za-z]|間|台|代|限|期|点|差)");
   static readonly Regex quantity=Rx(Left+@"(?<sign>[-−]?)(?<n>(?:[0-9]{1,3}(?:,[0-9]{3})+|[0-9]{1,15}))(?<fraction>\.[0-9]{1,6})?(?<unit>円|人|件|個|台|枚|kg|km|%)(?![A-Za-z])");
   static int Number(Match m,string name){return int.Parse(m.Groups[name].Value,Invariant);}
-  static string DateText(int y,int m,int d){
-   DateTime date;
-   string s=y.ToString("0000",Invariant)+"/"+m.ToString("00",Invariant)+"/"+d.ToString("00",Invariant);
-   if(!DateTime.TryParseExact(s,"yyyy/MM/dd",Invariant,DateTimeStyles.None,out date))return null;
-   return date.ToString("yyyy/M/d",Invariant)+"（"+"日月火水木金土"[(int)date.DayOfWeek]+"）";
+  static string DateText(Match match,int referenceYear){
+   bool hasYear=match.Groups["y"].Success,japanese=match.Groups["jp"].Success;
+   int y=hasYear?Number(match,"y"):referenceYear,m=Number(match,"m"),d=Number(match,"d");
+   if(y<1||y>9999||m<1||m>12||d<1||d>DateTime.DaysInMonth(y,m))return null;
+   string separator=match.Groups["sep"].Value=="-"?"-":"/";
+   string text=(hasYear?y.ToString("0000",Invariant)+(japanese?"年":separator):"")
+    +m.ToString(Invariant)+(japanese?"月":separator)+d.ToString(Invariant)+(japanese?"日":"");
+   return text+"（"+"日月火水木金土"[(int)new DateTime(y,m,d).DayOfWeek]+"）";
   }
   static string TimeText(int h,int m){return h>=0&&h<24&&m>=0&&m<60?h.ToString("00",Invariant)+":"+m.ToString("00",Invariant):null;}
   static void Add(FormatResult result,string compare,string left,Regex pattern,Func<Match,string> replacement){
@@ -62,8 +69,7 @@ namespace Henkan {
    try{
     string compare=Kana.ToHalfWidth(input),prefix=Kana.ToHalfWidth(left??"");
     if(protectedText.IsMatch(prefix+compare))return result;
-    Add(result,compare,prefix,fullDate,delegate(Match m){return DateText(Number(m,"y"),Number(m,"m"),Number(m,"d"));});
-    Add(result,compare,prefix,monthDate,delegate(Match m){return DateText(reference.Year,Number(m,"m"),Number(m,"d"));});
+    Add(result,compare,prefix,date,delegate(Match m){return DateText(m,reference.Year);});
     Add(result,compare,prefix,colonTime,delegate(Match m){return TimeText(Number(m,"h"),Number(m,"m"));});
     Add(result,compare,prefix,japaneseTime,delegate(Match m){
      int h=Number(m,"h"),minute=m.Groups["half"].Success?30:(m.Groups["m"].Success?Number(m,"m"):0);
@@ -86,6 +92,6 @@ namespace Henkan {
    if(at<=0||at>=text.Length)return true;
    return !NumericPart(text[at-1])||!NumericPart(text[at]);
   }
-  static bool NumericPart(char c){return Kana.IsDigit(c)||"/／:：.．,，-－−年月日時分秒半午前後台代間円人件個枚%％kgm".IndexOf(c)>=0;}
+  static bool NumericPart(char c){return Kana.IsDigit(c)||"/／・･:：.．,，-－−年月日時分秒半午前後台代間円人件個枚%％kgm".IndexOf(c)>=0;}
  }
 }

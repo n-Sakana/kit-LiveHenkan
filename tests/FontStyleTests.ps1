@@ -2,7 +2,7 @@ param([string]$Root=(Split-Path -Parent $PSScriptRoot),[string]$Label='current')
 # No windows, hooks, screen capture, resident or model: font resolution only.
 . (Join-Path $PSScriptRoot 'TestLib.ps1')
 Add-Type -AssemblyName PresentationCore,PresentationFramework
-$scratch=Join-Path $script:Repo 'temp';$env:TEMP=$scratch;$env:TMP=$scratch
+$scratch=Join-Path $script:Results 'temp';[IO.Directory]::CreateDirectory($scratch)|Out-Null;$env:TEMP=$scratch;$env:TMP=$scratch
 $null=Build-Henkan -App (Join-Path $Root 'app')
 $checks=New-Object System.Collections.Generic.List[object]
 function Check($name,$ok,$detail=''){$checks.Add([pscustomobject]@{Name=$name;Ok=[bool]$ok;Detail=$detail});"$ok $name $detail"}

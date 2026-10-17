@@ -47,6 +47,7 @@ namespace Henkan {
  sealed class OverlayWindow : GhostWindow {
   const double UnderGap=1,UnderWidth=1;
   readonly Border frame=new Border(),under=new Border(); readonly TextBlock text=new TextBlock(); readonly Rectangle endCaret=new Rectangle(),focusBar=new Rectangle();
+  readonly StackPanel row=new StackPanel{Orientation=Orientation.Horizontal};readonly WrappedComposition wrapped=new WrappedComposition();bool wrapping;
   int focusStart=-1,focusLength; int placedX,placedY,placedHeight; Color inkColor,backColor,lineColor;
   CaretInfo anchor; int session=-1,anchorSession=-2,sampledSession=-3; bool positioned,inline,holding; double shiftPx,lineDip,padTop; string shown="";
   Color sampled;
@@ -54,10 +55,10 @@ namespace Henkan {
   StyleInfo currentStyle;int styleSession=-1;
   readonly DispatcherTimer fallback=new DispatcherTimer(),hold=new DispatcherTimer();
   public bool Composing; readonly DoubleAnimationUsingKeyFrames blink;
-  public string Inspect(){return "visible="+IsVisible+"\tx="+placedX+"\ty="+placedY+"\theight="+placedHeight+"\tfont="+text.FontFamily.Source+"\tfontDip="+text.FontSize.ToString(System.Globalization.CultureInfo.InvariantCulture)+"\tweight="+text.FontWeight.ToOpenTypeWeight()+"\titalic="+(text.FontStyle==FontStyles.Italic)+"\tscale="+Scale.ToString(System.Globalization.CultureInfo.InvariantCulture)+"\tanchor="+anchor.Found+"\tsource="+anchor.Source;}
+  public string Inspect(){return "visible="+IsVisible+"\tx="+placedX+"\ty="+placedY+"\theight="+placedHeight+"\twidth="+(int)Math.Ceiling(ActualWidth*Scale)+"\twrapped="+wrapping+"\tlines="+(wrapping?wrapped.Lines:1)+"\tscroll="+(wrapping?wrapped.Scroll:0)+"\tfont="+text.FontFamily.Source+"\tfontDip="+text.FontSize.ToString(System.Globalization.CultureInfo.InvariantCulture)+"\tweight="+text.FontWeight.ToOpenTypeWeight()+"\titalic="+(text.FontStyle==FontStyles.Italic)+"\tscale="+Scale.ToString(System.Globalization.CultureInfo.InvariantCulture)+"\tanchor="+anchor.Found+"\tsource="+anchor.Source;}
 
   public OverlayWindow(){
-   StackPanel row=new StackPanel{Orientation=Orientation.Horizontal};
+   Closed+=delegate{wrapped.Dispose();};
    Grid lined=new Grid{VerticalAlignment=VerticalAlignment.Top};
    under.Child=text;lined.Children.Add(under);
    // The stretch being chosen gets a heavier line and a tint, like the selected clause on macOS.
@@ -101,12 +102,14 @@ namespace Henkan {
   public bool FocusPoint(out int x,out int top,out int bottom){
    x=placedX;top=placedY;bottom=placedY+placedHeight;
    if(!Composing||!positioned||holding||!IsVisible)return false;
+   if(wrapping){Point p=wrapped.Position(Math.Max(0,focusStart));x+=(int)Math.Round(p.X*Scale);top+=(int)Math.Round(Math.Max(0,p.Y)*Scale);bottom=Math.Min(bottom,top+(int)Math.Ceiling(lineDip*Scale));return true;}
    if(focusStart>0&&focusStart<=shown.Length)x+=(int)Math.Round(TextWidthPx(shown.Substring(0,focusStart)));
    if(!inline)x+=(int)Math.Round(10*Scale);
    return true;
   }
   void StylePanel(){
    inline=false;
+   frame.Child=row;wrapping=false;wrapped.Clear();
    Paint(Theme.Surface,Theme.Ink,Theme.Accent);
    frame.BorderBrush=Theme.Brush(Theme.Edge);frame.BorderThickness=new Thickness(1);frame.CornerRadius=new CornerRadius(Theme.RadiusControl);frame.Padding=new Thickness(10,6,10,7);
    text.FontFamily=Theme.Font;text.FontSize=16;text.FontWeight=FontWeights.Normal;text.FontStyle=FontStyles.Normal;text.LineHeight=double.NaN;text.LineStackingStrategy=LineStackingStrategy.MaxHeight;
@@ -123,6 +126,7 @@ namespace Henkan {
     family=DocumentFonts.Family(style);
     double spacing=1.2;try{spacing=new FontFamily(style.FontName).LineSpacing;}catch{}
     fontDip=CaretGeometry.FontDip(style,caretDip,spacing);
+    if(style.Web&&style.WebText!=null&&style.WebText.FontPixels>0)fontDip=style.WebText.FontPixels/scale;
     lineDip=fontDip*spacing;
    }else{
     // Nothing published: a spreadsheet cell is 11 pt Yu Gothic unless the user changed it, anything else is guessed from the caret.
@@ -150,6 +154,8 @@ namespace Henkan {
    text.Background=webFallback?Theme.Brush(back):null;
    TextOptions.SetTextRenderingMode(text,webFallback?TextRenderingMode.ClearType:TextRenderingMode.Grayscale);
    RenderOptions.SetClearTypeHint(text,webFallback?ClearTypeHint.Enabled:ClearTypeHint.Auto);
+   TextOptions.SetTextRenderingMode(wrapped,webFallback?TextRenderingMode.ClearType:TextRenderingMode.Grayscale);
+   RenderOptions.SetClearTypeHint(wrapped,webFallback?ClearTypeHint.Enabled:ClearTypeHint.Auto);
    text.LineHeight=lineDip;text.LineStackingStrategy=LineStackingStrategy.BlockLineHeight;
    TextOptions.SetTextFormattingMode(text,TextFormattingMode.Ideal);
    under.BorderThickness=new Thickness(0,0,0,UnderWidth);under.Padding=new Thickness(0,0,0,UnderGap);
@@ -200,7 +206,7 @@ namespace Henkan {
    shiftPx+=w;
   }
   public void Apply(View v){
-   if(!v.Active){Composing=false;fallback.Stop();hold.Stop();holding=false;shown="";shownFocus=-2;positioned=false;Conceal();return;}
+   if(!v.Active){Composing=false;fallback.Stop();hold.Stop();holding=false;shown="";shownFocus=-2;positioned=false;wrapped.Clear();Conceal();return;}
    if(!Composing||v.Session!=session){
     Composing=true;session=v.Session;shiftPx=0;
     positioned=anchorSession==session;   // the caret may have been reported first
@@ -211,8 +217,20 @@ namespace Henkan {
    if(positioned&&!holding){Place();Reveal();}
   }
   void Place(){
+   WebTextInfo web=inline&&styleSession==anchorSession&&currentStyle!=null&&currentStyle.Web?currentStyle.WebText:null;
+   double scale=Scale;
+   wrapping=web!=null&&anchor.Found&&(shown.IndexOf('\n')>=0||TextWidthPx(shown)>web.Bounds.Right-anchor.Left-shiftPx);
+   if(wrapping){
+    double left=web.Bounds.Left,width=web.Bounds.Width/scale,offset=Math.Max(0,(anchor.Left+shiftPx-left)/scale);
+    double line=web.LinePixels>0?web.LinePixels/scale:Math.Max(lineDip,anchor.Height/scale);
+    double available=Math.Max(1,(web.Bounds.Bottom-anchor.Top)/scale-2);
+    wrapped.Set(shown,new Typeface(text.FontFamily,text.FontStyle,text.FontWeight,text.FontStretch),text.FontSize,line,width,Math.Min(width,offset),available,text.Foreground,Theme.Brush(backColor),Theme.Brush(lineColor),focusStart,focusLength,lineDip);
+    frame.Child=wrapped;frame.Background=null;frame.Padding=new Thickness(0);UpdateLayout();
+    placedX=(int)Math.Ceiling(left);placedY=anchor.Top;placedHeight=(int)Math.Ceiling(wrapped.Height*scale);MoveTo(placedX,placedY);return;
+   }
+   if(frame.Child!=row){frame.Child=row;frame.Background=Theme.Brush(backColor);frame.Padding=new Thickness(0,padTop,1,0);wrapped.Clear();}
    UpdateLayout();
-   double scale=Scale;int widthPx=(int)Math.Ceiling(ActualWidth*scale),heightPx=(int)Math.Ceiling(ActualHeight*scale);
+   int widthPx=(int)Math.Ceiling(ActualWidth*scale),heightPx=(int)Math.Ceiling(ActualHeight*scale);
    int x,y;
    if(inline&&anchor.Found){
     // A native caret can include paragraph leading. Anchor the text at its top;

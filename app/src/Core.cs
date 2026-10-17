@@ -191,21 +191,25 @@ namespace Henkan {
    bool newer=c.ConvReading==null||r.Reading.Length>=c.ConvReading.Length||!c.Reading.StartsWith(c.ConvReading,StringComparison.Ordinal);
    if(!newer)return;
    c.ConvReading=r.Reading;c.ConvContext=r.Context;c.Surface=r.Surface;c.Align=r.Align;
-   Settle();
+   if(Settle())Request(false);
    if(awaiting&&AllCurrent())FinishAwait();
    else Changed();
   }
 
   // Cuts an over-long open chunk at a segment boundary and commits closed text that is ready.
-  void Settle(){
-   Chunk o=Open;
-   if(o!=null&&!Plain&&roma.Pending.Length==0&&o.Reading.Length>settings.LiveChars&&o.Surface!=null&&o.ConvReading==o.Reading&&o.Align!=null&&o.Align.Ok){
+  bool Settle(){
+   Chunk o=Open;bool split=false;
+   // A completed conversion still describes its prefix after more keys arrive.
+   // Waiting for an exact match here makes fast typing grow the inference and
+   // romaji work without bound. Keep the same converted lookahead and boundaries.
+   if(o!=null&&!Plain&&o.Surface!=null&&o.ConvReading!=null&&o.ConvReading.Length>settings.LiveChars&&o.Reading.StartsWith(o.ConvReading,StringComparison.Ordinal)&&o.Align!=null&&o.Align.Ok){
     List<int> starts=o.Align.SegmentStarts();int cut=0;
-    foreach(int s in starts)if(s>0&&o.Reading.Length-s>=settings.KeepChars&&SafeCut(o,s))cut=s;
-    if(cut==0)foreach(int s in starts)if(s>0&&o.Reading.Length-s>=4&&SafeCut(o,s)){cut=s;break;}
-    if(cut>0)Split(o,cut);
+    foreach(int s in starts)if(s>0&&o.ConvReading.Length-s>=settings.KeepChars&&SafeCut(o,s))cut=s;
+    if(cut==0)foreach(int s in starts)if(s>0&&o.ConvReading.Length-s>=4&&SafeCut(o,s)){cut=s;break;}
+    if(cut>0){Split(o,cut);split=true;}
    }
    Overflow();
+   return split;
   }
   static bool UnitBoundary(List<Unit> units,int offset){int n=0;foreach(Unit u in units){if(n==offset)return true;n+=u.Text.Length;}return n==offset;}
   static bool SafeCut(Chunk c,int offset){return UnitBoundary(c.Units,offset)&&NumericFormatting.SafeBoundary(c.Surface,c.Align.SurfaceFor(0,offset).Length);}
@@ -213,10 +217,12 @@ namespace Henkan {
    Chunk head=new Chunk{Id=nextId++,Closed=true};int n=0,count=0;
    foreach(Unit u in o.Units){if(n>=cut)break;head.Units.Add(u);n+=u.Text.Length;count++;}
    head.Recount();
-   string headSurface=o.Align.SurfaceFor(0,cut),tailSurface=o.Align.SurfaceFor(cut,o.Reading.Length);
+   string convertedTail=o.ConvReading.Substring(cut);
+   string headSurface=o.Align.SurfaceFor(0,cut),tailSurface=o.Align.SurfaceFor(cut,o.ConvReading.Length);
    head.ConvReading=head.Reading;head.ConvContext=o.ConvContext;head.Surface=headSurface;head.Align=Alignment.Build(head.Reading,headSurface);
    roma.Units.RemoveRange(0,count);SyncOpen();
-   o.ConvReading=o.Reading;o.Surface=tailSurface;o.Align=Alignment.Build(o.Reading,tailSurface);
+   // In-flight results use offsets before the split, even in repeated phrases.
+   o.Id=nextId++;o.ConvReading=convertedTail;o.Surface=tailSurface;o.Align=Alignment.Build(convertedTail,tailSurface);
    o.ConvContext=Tail((head.ConvContext??"")+headSurface,ContextChars);
    chunks.Insert(chunks.Count-1,head);
   }

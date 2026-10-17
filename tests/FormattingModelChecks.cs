@@ -15,7 +15,11 @@ namespace Henkan.Tests {
      new[]{"hiyouha1234enndesu","費用は1,234円です"},
      new[]{"kaigiha2026/10/19nogogo3jikara","会議は2026/10/19（月）の15:00から"},
      new[]{"-1234.5enn","-1,234.5円"},new[]{"2026/10/17to2026/10/18","2026/10/17（土）と2026/10/18（日）"},
-     new[]{"dai3kainokaigiha10gatsu5nichidesu","第3回の会議は2026/10/5（月）です"}
+     new[]{"dai3kainokaigiha10gatsu5nichidesu","第3回の会議は10月5日（月）です"},
+     new[]{"10/2","10/2（金）"},new[]{"11/22","11/22（日）"},new[]{"11・2","11/2（月）"},
+     new[]{"11gatsu3nichi","11月3日（火）"},new[]{"2026nenn11gatsu3nichi","2026年11月3日（火）"},
+     new[]{"2026/11/2","2026/11/2（月）"},new[]{"2026/11/3","2026/11/3（火）"},
+     new[]{"sankahiha25000enndesu","参加費は25,000円です"}
     };
     foreach(string[] c in cases){
      h.Composer.Abandon();h.Composer.ResetContext();h.Document.Length=0;

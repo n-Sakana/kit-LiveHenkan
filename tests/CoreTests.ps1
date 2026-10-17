@@ -2,7 +2,7 @@ param([string]$ModelDir='',[int]$Threads=4,[string]$Root=(Split-Path -Parent $PS
 # Input logic with the real model, without windows or hooks. Safe to run while other work is on screen.
 . (Join-Path $PSScriptRoot 'TestLib.ps1')
 if(!('Henkan.Tests.CoreChecks' -as [type])){
- $temp=Join-Path $script:Repo 'temp';[IO.Directory]::CreateDirectory($temp)|Out-Null;$env:TEMP=$temp;$env:TMP=$temp
+ $temp=Join-Path $script:Results 'temp';[IO.Directory]::CreateDirectory($temp)|Out-Null;$env:TEMP=$temp;$env:TMP=$temp
  $null=Build-Henkan -App (Join-Path $Root 'app') -Extra @((Join-Path $PSScriptRoot 'Headless.cs'),(Join-Path $PSScriptRoot 'Driver.cs'),(Join-Path $PSScriptRoot 'CoreChecks.cs'))
  [Henkan.Native]::PrepareProcess()
 }

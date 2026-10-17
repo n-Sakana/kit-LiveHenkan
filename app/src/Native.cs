@@ -29,6 +29,7 @@ namespace Henkan {
  public sealed class StyleInfo {
   public string FontName; public double SizePoints; public int Ink=-1,Back=-1;
   public int Weight=400; public bool Italic,Web;
+  public WebTextInfo WebText;
   public bool Bold{get{return Weight>=600;}set{Weight=value?700:400;}}
   public void ReadWeight(object value){if(value is int&&(int)value>=1&&(int)value<=999)Weight=(int)value;}
  }

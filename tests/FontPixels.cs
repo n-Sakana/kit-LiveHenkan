@@ -17,6 +17,10 @@ namespace Henkan.Tests {
      // ClearType edges are coloured too; reject only our known underline colours.
      if((Math.Abs(c.R-0)<8&&Math.Abs(c.G-118)<8&&Math.Abs(c.B-236)<8)||
         (Math.Abs(c.R-61)<8&&Math.Abs(c.G-154)<8&&Math.Abs(c.B-255)<8))continue;
+     // At fractional display scaling the underline blends with the background.
+     // Exclude those same accent colours at partial coverage as well.
+     double a=dark?(c.B-41)/214.0:(255-c.R)/255.0;
+     if(a>.05&&a<=1&&(dark?Math.Abs(c.R-(41+20*a))<4&&Math.Abs(c.G-(41+113*a))<4:Math.Abs(c.G-(255-137*a))<4&&Math.Abs(c.B-(255-19*a))<4))continue;
      double coverage=Math.Max(0,Math.Min(1,((c.R+c.G+c.B)/3.0-back)/(ink-back)));
      if(coverage<.1)continue;
      result.Coverage+=coverage;sx+=coverage*x;sy+=coverage*y;

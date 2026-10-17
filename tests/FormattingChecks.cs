@@ -45,7 +45,22 @@ namespace Henkan.Tests {
     h.Reset();h.Type("2026/10/17");h.Key(32);h.Key(38);equal("formatted option can be picked again","2026/10/17（土）",h.Text);h.Key(13);equal("formatting selection not learned","0",h.Dictionary.LearnedCount.ToString());
     h.Reset();h.Type("予定は2026/10/17の午後3時です");equal("multiple edits in one composition","予定は2026/10/17（土）の15:00です",h.Text);h.Composer.CommitNow();equal("commit-now uses same preview","予定は2026/10/17（土）の15:00です",h.Document);
     h.Reset();h.Type("ID:");h.Key(13);h.Type("2026/10/17");equal("committed identifier prefix protects following value","2026／10／17",h.Text);
-    h.Reset();h.Type("10月17日");Composer.Now=delegate{return new DateTime(2027,1,1);};equal("year does not change midway through composition","2026/10/17（土）",h.Text);
+    string[][] dates={new[]{"10/2","10/2（金）","10／2"},new[]{"11／22","11/22（日）","11／22"},new[]{"11・2","11/2（月）","11・2"},new[]{"11月3日","11月3日（火）","11月3日"},new[]{"2026年11月3日","2026年11月3日（火）","2026年11月3日"}};
+    foreach(string[] c in dates){
+     h.Reset();h.Type(c[0]);equal("date preview "+c[0],c[1],h.Text);equal("date stays uncommitted "+c[0],"",h.Document);
+     h.Key(32);equal("date original "+c[0],c[2],h.Text);h.Key(38);equal("date formatted again "+c[0],c[1],h.Text);
+     h.Key(32);h.Key(13);equal("date original commit "+c[0],c[2],h.Document);
+     h.Reset();h.Type(c[0]);h.Key(13);equal("date formatted commit "+c[0],c[1],h.Document);
+    }
+    h.Reset();h.Type("11・2");h.Type("2");equal("short date continues after weekday","11/22（日）",h.Text);h.Key(8);equal("short date backspace","11/2（月）",h.Text);
+    h.Reset();h.Type("ID:");h.Key(13);h.Type("11・2");equal("committed ID protects short date","11・2",h.Text);
+    foreach(string token in new[]{"11・22","１１･２２","11／22","2026年11月3日"})for(int at=1;at<token.Length;at++)equal("date cannot be split "+token+" at "+at,"False",NumericFormatting.SafeBoundary(token,at).ToString());
+    equal("prose boundary remains available","True",NumericFormatting.SafeBoundary("は11・2",1).ToString());
+    equal("short leap day in leap year","2/29（火）",NumericFormatting.Apply("2/29","",new DateTime(2028,1,1)).Text);
+    equal("short Japanese leap day","2月29日（火）",NumericFormatting.Apply("2月29日","",new DateTime(2028,1,1)).Text);
+    h.Reset();h.Type("10月17日");Composer.Now=delegate{return new DateTime(2027,1,1);};equal("year does not change midway through composition","10月17日（土）",h.Text);
+    h.Type("です");equal("year stays fixed after more input","10月17日（土）です",h.Text);
+    h.Key(13);h.Type("10月17日");equal("next composition uses new year","10月17日（日）",h.Text);
    }finally{Composer.Now=now;}
    return checks.ToArray();
   }
@@ -53,7 +68,7 @@ namespace Henkan.Tests {
   // while driving identical key sequences, including repeated view reads.
   public static double[] Measure(string table,string folder,bool enabled,int count){
    Host h=new Host(table,folder);h.Settings.FormatNumbers=enabled;
-   string[] texts={"予定は2026/10/17の午後3時です","1234.50円","ID:2026/10/17","今日は晴れです"};
+   string[] texts={"予定は2026/10/17の午後3時です","1234.50円","ID:2026/10/17","今日は晴れです","次の会議の予定は10／2です","11・2","11月3日"};
    List<double> samples=new List<double>();Stopwatch watch=new Stopwatch();
    for(int i=-100;i<count;i++){
     h.Reset();string text=texts[(i+100)%texts.Length];

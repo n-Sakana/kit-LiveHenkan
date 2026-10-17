@@ -1,7 +1,7 @@
 # Shared by the tests. ASCII only; expected Japanese text is kept in data files.
 $ErrorActionPreference='Stop'
 $script:Repo=Split-Path -Parent $PSScriptRoot
-$script:Results=Join-Path $script:Repo 'results'
+$script:Results=if($env:HENKAN_TEST_RESULTS){$env:HENKAN_TEST_RESULTS}else{Join-Path $script:Repo 'results'}
 . (Join-Path $script:Repo 'app\Common.ps1')
 [Console]::OutputEncoding=[Text.Encoding]::UTF8
 if($PSVersionTable.PSVersion.Major -ne 5 -or ![Environment]::Is64BitProcess){throw 'Run the tests with 64-bit Windows PowerShell 5.1.'}
@@ -9,7 +9,7 @@ if($PSVersionTable.PSVersion.Major -ne 5 -or ![Environment]::Is64BitProcess){thr
 
 function Initialize-Tests {
  if(!('Henkan.Tests.Driver' -as [type])){
-  $temp=Join-Path $script:Repo 'temp';[IO.Directory]::CreateDirectory($temp)|Out-Null;$env:TEMP=$temp;$env:TMP=$temp
+  $temp=Join-Path $script:Results 'temp';[IO.Directory]::CreateDirectory($temp)|Out-Null;$env:TEMP=$temp;$env:TMP=$temp
   $null=Build-Henkan -App (Join-Path $script:Repo 'app') -Extra @((Join-Path $PSScriptRoot 'Headless.cs'),(Join-Path $PSScriptRoot 'Driver.cs'))
   [Henkan.Native]::PrepareProcess()
  }

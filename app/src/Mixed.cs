@@ -70,8 +70,9 @@ namespace Henkan {
   }
   public static bool IsEnglish(Unit u){return u.English;}
   static Unit English(char c){return new Unit(c.ToString(),c.ToString()){English=true};}
-  static bool Attachment(string tail){
-   foreach(string p in new string[]{"wo","ha","ga","ni","no","de","to","he","kara","made","shita","suru"})if(tail.StartsWith(p,StringComparison.OrdinalIgnoreCase))return true;
+  static readonly string[] attachments={"wo","ha","ga","ni","no","de","to","he","kara","made","shita","suru"};
+  static bool Attachment(string token,int at){
+   foreach(string p in attachments)if(token.Length-at>=p.Length&&string.Compare(token,at,p,0,p.Length,StringComparison.OrdinalIgnoreCase)==0)return true;
    return false;
   }
   List<Unit> Split(string token,bool phrase,Dictionary<string,bool> lessons){
@@ -97,13 +98,16 @@ namespace Henkan {
      bool taught=lessons.TryGetValue(key,out learned);
      // Inside a Japanese run, a spelling such as node is also just の+で.
      if(p>0&&!phrase&&!taught&&!char.IsUpper(raw[0])&&kanaWords.Contains(key))continue;
-     if(p+len<n&&!Attachment(token.Substring(p+len)))continue;
+     // Unknown lowercase strings cannot win the English path. Do not allocate
+     // and scan the entire remaining sentence for each of their 40 lengths.
      bool capital=char.IsUpper(raw[0])&&(p==0||!char.IsUpper(token[p-1]));bool name=false;
+     if(!known&&!taught&&!capital)continue;
+     if(p+len<n&&!Attachment(token,p+len))continue;
      // Uppercase initials protect arbitrary names; a following romaji suffix can still be Japanese.
      if(capital&&!known&&!taught){
       if(p+len<n)continue;
       bool hasWord=false;
-      for(int k=1;k<len;k++)if(words.Contains(raw.Substring(0,k))&&Attachment(raw.Substring(k))){hasWord=true;break;}
+      for(int k=1;k<len;k++)if(words.Contains(raw.Substring(0,k))&&Attachment(raw,k)){hasWord=true;break;}
       if(hasWord)continue;
       known=true;name=true;
      }

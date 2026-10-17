@@ -61,20 +61,20 @@ namespace Henkan {
       }
       if(r.Focus!=Native.FocusWindow()||Superseded())continue;
       deliver(caret,r.Session,false);
-      if(r.Style)deliverStyle(style,r.Focus,r.Session);
+      if(r.Style||(style!=null&&style.Web))deliverStyle(style,r.Focus,r.Session);
      }
      if(!r.AfterCommit)continue;
      // The application takes the text in one character at a time. Wait until its caret has moved and come to rest.
      CaretInfo last=r.Before;bool moved=false;int still=0;
      for(int i=0;i<24&&!stop&&!Superseded();i++){
       Thread.Sleep(20);
-      CaretInfo c=Find(r.Focus);
+      CaretInfo c;StyleInfo style;FindTarget(r.Focus,out c,out style);
       if(r.Focus!=Native.FocusWindow())break;
       if(!c.Found)continue;
       if(!c.Same(r.Before))moved=true;
       if(c.Same(last))still++;else still=0;
       last=c;
-      if(moved&&still>=2){deliver(c,r.Session,true);break;}
+      if(moved&&still>=2){deliver(c,r.Session,true);if(style!=null&&style.Web)deliverStyle(style,r.Focus,r.Session);break;}
      }
     }catch{}
    }
@@ -105,13 +105,13 @@ namespace Henkan {
    if(style!=null)style.Web=web;
    CaretInfo native;IntPtr actual;
    if(Native.SystemCaret(out native,out actual)&&actual==focus&&
-      Native.CaretBelongsToFocus(native.Window,focus)&&CaretGeometry.InBounds(native,bounds)){caret=native;return;}
-   if(Native.AccessibleCaret(focus,out native)&&CaretGeometry.InBounds(native,bounds)){caret=native;return;}
+      Native.CaretBelongsToFocus(native.Window,focus)&&CaretGeometry.InBounds(native,bounds)){caret=native;WebText.Read(element,selection,caret,style);return;}
+   if(Native.AccessibleCaret(focus,out native)&&CaretGeometry.InBounds(native,bounds)){caret=native;WebText.Read(element,selection,caret,style);return;}
    StyleInfo caretStyle;
    if(Henkan.AutomationCaret.Find(focus,out caret,out caretStyle)&&CaretGeometry.InBounds(caret,bounds)){
-    if(caretStyle!=null){style=caretStyle;style.Web=web;}return;
+    if(caretStyle!=null){style=caretStyle;style.Web=web;}WebText.Read(element,selection,caret,style);return;
    }
-   if(selection!=null&&AutomationCaret(selection,focus,out caret)&&CaretGeometry.InBounds(caret,bounds))return;
+   if(selection!=null&&AutomationCaret(selection,focus,out caret)&&CaretGeometry.InBounds(caret,bounds)){WebText.Read(element,selection,caret,style);return;}
    // Never ask the Office host for a caret when a child editor has focus.
    caret=new CaretInfo{Window=focus};
   }

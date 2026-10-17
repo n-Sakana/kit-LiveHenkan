@@ -9,6 +9,7 @@ namespace Henkan {
  public static class DocumentFonts {
   static readonly Dictionary<string,bool> japanese=new Dictionary<string,bool>(StringComparer.OrdinalIgnoreCase);
   static string webJapanese;
+  static GlyphTypeface webGlyphs;
   static readonly Dictionary<string,string> primary=new Dictionary<string,string>(StringComparer.OrdinalIgnoreCase);
   public static bool HasJapanese(string name){
    lock(japanese){
@@ -41,6 +42,15 @@ namespace Henkan {
    if(n.Contains("consolas")||n.Contains("courier")||n.Contains("cascadia")||n.Contains("lucida console")||n.Contains("mono"))return "MS Gothic";
    if(n.Contains("mincho")||n.Contains("明朝")||n.Contains("serif")||n.Contains("times")||n.Contains("century"))return "Yu Mincho";
    return "Yu Gothic UI";
+  }
+  // Only use characters whose actual fallback glyph advance is one em when
+  // estimating visual zoom from a UIA text rectangle. This also covers kana-only input.
+  public static bool FullEmJapanese(char c){
+   if(!Kana.IsKanaLike(c)&&!(c>='一'&&c<='鿿'))return false;
+   lock(japanese){
+    if(webGlyphs==null)new Typeface(WebJapanese).TryGetGlyphTypeface(out webGlyphs);
+    ushort glyph;return webGlyphs!=null&&webGlyphs.CharacterToGlyphMap.TryGetValue(c,out glyph)&&Math.Abs(webGlyphs.AdvanceWidths[glyph]-1)<.001;
+   }
   }
   static string Primary(StyleInfo style){
    if(!style.Web||HasJapanese(style.FontName))return style.FontName;

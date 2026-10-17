@@ -1,0 +1,26 @@
+<!doctype html><html lang="ja"><meta charset="utf-8"><title>LH||END</title>
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'">
+<style>
+body{margin:24px;background:#eee;font:14px 'Segoe UI',sans-serif}
+.editor{box-sizing:content-box;width:540px;min-height:110px;border:1px solid #999;border-radius:12px;padding:12px;margin:16px 0;background:#fff;color:#242424;font:14px/20px 'Segoe UI',sans-serif;white-space:pre-wrap;overflow-wrap:break-word}
+.editor p{margin:0}.copilot{font-size:16px;line-height:24px;font-weight:500}.dark{background:#292929;color:#f5f5f5}.pane{width:280px;height:160px;overflow:auto}.zoom{zoom:1.25}.fractional{font-size:13.5px;line-height:21px}.nested{font-size:18px;line-height:28px}.nested p{font-size:14px;line-height:20px}
+</style>
+<p>Offline Chromium chat-field reproductions; no service connection. Tab advances fields.</p>
+<div id="teams" class="editor" contenteditable="true" role="textbox" aria-multiline="true" spellcheck="false"><p>これはチームスでのテストね</p></div>
+<div id="copilot" class="editor copilot" contenteditable="true" role="textbox" aria-multiline="true" spellcheck="false">使い勝手 </div>
+<div id="dark" class="editor copilot dark" contenteditable="true" role="textbox" aria-multiline="true" spellcheck="false">使い勝手 </div>
+<div id="pane" class="editor copilot pane" contenteditable="true" role="textbox" aria-multiline="true" spellcheck="false">確定済みの文はそのままです。<br>次の段落です。<br>使い勝手 </div>
+<div id="zoom" class="editor zoom" contenteditable="true" role="textbox" aria-multiline="true" spellcheck="false">使い勝手 </div>
+<div id="fractional" class="editor fractional" contenteditable="true" role="textbox" aria-multiline="true" spellcheck="false">使い勝手 </div>
+<div id="nested" class="editor nested" contenteditable="true" role="textbox" aria-multiline="true" spellcheck="false"><p>使い勝手 </p></div>
+<div id="empty" class="editor" contenteditable="true" role="textbox" aria-multiline="true" spellcheck="false"></div>
+<div id="long" class="editor copilot pane" contenteditable="true" role="textbox" aria-multiline="true" spellcheck="false">確定済みの文はそのままです。<br>二行目の文章です。<br>使い勝手 </div>
+<div id="excel" class="editor copilot pane" contenteditable="true" role="textbox" aria-multiline="true" spellcheck="false">これはExcelでのテスト<br>大きさと段ずれの確認<br>同じ段にあっても</div>
+<div id="yu" class="editor" style="font-family:'Yu Gothic UI';font-size:20px;line-height:28px" contenteditable="true" role="textbox" spellcheck="false">使い勝手 </div>
+<div id="meiryo" class="editor" style="font-family:Meiryo;font-size:18px;line-height:26px" contenteditable="true" role="textbox" spellcheck="false">使い勝手 </div>
+<div id="teamsZoom" class="editor zoom" contenteditable="true" role="textbox" spellcheck="false">これはチームスでのテストね</div>
+<script>
+function mirror(){let e=document.activeElement;document.title='LH|'+e.id+'|'+(e.innerText||'').replace(/\n/g,'\\n')+'|END';}
+document.addEventListener('focusin',e=>{if(e.target.isContentEditable){let r=document.createRange();r.selectNodeContents(e.target);r.collapse(false);let s=getSelection();s.removeAllRanges();s.addRange(r);e.target.scrollIntoView({block:'center'});mirror();}});
+document.addEventListener('input',mirror);document.getElementById('teams').focus();
+</script></html>
