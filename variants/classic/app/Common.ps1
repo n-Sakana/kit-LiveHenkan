@@ -39,7 +39,7 @@ function Build-LiveHenkan([string]$App,[string[]]$Extra=@()){
  $cp=New-Object System.CodeDom.Compiler.CompilerParameters
  $cp.GenerateInMemory=$true
  $cp.CompilerOptions='/unsafe /optimize'
- $cp.ReferencedAssemblies.AddRange(@('System.dll','System.Core.dll','System.Numerics.dll','System.Drawing.dll','System.Windows.Forms.dll','System.Xaml.dll','Accessibility.dll',
+ $cp.ReferencedAssemblies.AddRange(@('System.dll','System.Core.dll','System.Xml.dll','System.Numerics.dll','System.Drawing.dll','System.Windows.Forms.dll','System.Xaml.dll','Accessibility.dll',
   (Join-Path $wpf 'WindowsBase.dll'),(Join-Path $wpf 'PresentationCore.dll'),(Join-Path $wpf 'PresentationFramework.dll'),(Join-Path $wpf 'UIAutomationClient.dll'),(Join-Path $wpf 'UIAutomationTypes.dll')))
  $files=@(Get-ChildItem -LiteralPath (Join-Path $App 'src') -Filter '*.cs'|Sort-Object Name|ForEach-Object{$_.FullName})+$Extra
  $sources=@($files|ForEach-Object{[IO.File]::ReadAllText($_,[Text.Encoding]::UTF8)})

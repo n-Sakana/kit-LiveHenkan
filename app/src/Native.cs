@@ -5,6 +5,21 @@ using System.Collections.Generic;
 using System.Runtime.InteropServices;
 
 namespace LiveHenkan {
+ // Pure geometry rules are shared by the probe and the headless regression tests.
+ public static class CaretGeometry {
+  public static bool IsCaretRectangle(System.Windows.Rect rect){return !rect.IsEmpty&&rect.Width<=4&&rect.Height>0&&rect.Height<=1000;}
+  public static bool ValidPoints(double value){return !double.IsNaN(value)&&!double.IsInfinity(value)&&value>0&&value<=300;}
+  public static bool InBounds(CaretInfo caret,System.Windows.Rect bounds){
+   if(!caret.Found||caret.Height<=0||caret.Height>1000)return false;
+   if(bounds.IsEmpty)return true;
+   return caret.Left>=bounds.Left-2&&caret.Left<=bounds.Right+2&&caret.Top>=bounds.Top-2&&caret.Top+caret.Height<=bounds.Bottom+2;
+  }
+  public static double FontDip(StyleInfo style,double caretDip,double spacing){
+   // A caret may be a whole cell or line box. Its height is NOT a font size or zoom factor.
+   if(style!=null&&ValidPoints(style.SizePoints))return style.SizePoints*96.0/72.0;
+   return Math.Max(11,Math.Min(24,caretDip/Math.Max(1,spacing)));
+  }
+ }
  public struct CaretInfo {
   public bool Found; public int Left,Top,Height; public IntPtr Window; public string Source;
   public bool Same(CaretInfo o){return Found==o.Found&&Left==o.Left&&Top==o.Top&&Height==o.Height;}
@@ -48,6 +63,8 @@ namespace LiveHenkan {
   [DllImport("user32.dll")]public static extern bool ClientToScreen(IntPtr hwnd,ref Point p);
   [DllImport("user32.dll")]public static extern bool GetWindowRect(IntPtr hwnd,out Rect r);
   [DllImport("user32.dll")]public static extern bool IsWindow(IntPtr hwnd);
+  [DllImport("user32.dll")]public static extern bool IsChild(IntPtr parent,IntPtr child);
+  public static bool CaretBelongsToFocus(IntPtr caret,IntPtr focus){return caret==focus||IsChild(focus,caret);}
   [DllImport("user32.dll")]public static extern IntPtr GetKeyboardLayout(uint thread);
   [DllImport("user32.dll",CharSet=CharSet.Unicode)]public static extern int ToUnicodeEx(uint vk,uint scan,byte[] state,StringBuilder buffer,int size,uint flags,IntPtr layout);
   [DllImport("user32.dll")]public static extern bool GetLastInputInfo(ref LastInput info);

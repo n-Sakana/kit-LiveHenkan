@@ -1,4 +1,4 @@
-﻿// The resident: keyboard and mouse hooks, input mode, output to the application, tray icon and commands.
+// The resident: keyboard and mouse hooks, input mode, output to the application, tray icon and commands.
 using System;
 using System.IO;
 using System.IO.Pipes;
@@ -23,20 +23,28 @@ namespace LiveHenkan {
   readonly Action<CaretInfo,int,bool> deliver; readonly Action<StyleInfo,IntPtr,int> deliverStyle; Request waiting; volatile bool stop;
   public Probe(Action<CaretInfo,int,bool> sink,Action<StyleInfo,IntPtr,int> styleSink){deliver=sink;deliverStyle=styleSink;thread=new Thread(Loop);thread.IsBackground=true;thread.Name="probe";thread.SetApartmentState(ApartmentState.STA);thread.Start();}
   public void Stop(){stop=true;signal.Set();}
-  void Post(Request r){lock(gate){if(waiting!=null&&waiting.CloseIme)r.CloseIme=true;waiting=r;}signal.Set();}
-  // `locate` is false when the caller already has the caret and only the text style is wanted.
-  public void Start(IntPtr focus,int session,bool locate){Post(new Request{Focus=focus,Session=session,Locate=locate,Style=true,CloseIme=true});}
+  void Post(Request r){
+   lock(gate){
+    if(waiting!=null&&waiting.Focus==r.Focus){
+     if(!r.Locate){waiting.CloseIme|=r.CloseIme;waiting.Password|=r.Password;signal.Set();return;}
+     r.CloseIme|=waiting.CloseIme;r.Password|=waiting.Password;
+    }
+    waiting=r;
+   }
+   signal.Set();
+  }
+  public void Start(IntPtr focus,int session){Post(new Request{Focus=focus,Session=session,Locate=true,Style=true,CloseIme=true});}
   public void Locate(IntPtr focus,int session){Post(new Request{Focus=focus,Session=session,Locate=true});}
   public void AfterCommit(IntPtr focus,int session,CaretInfo before){Post(new Request{Focus=focus,Session=session,Locate=true,AfterCommit=true,Before=before});}
   public void CloseIme(IntPtr focus){Post(new Request{Focus=focus,CloseIme=true});}
-  public void CheckPassword(IntPtr focus){lock(gate){if(waiting!=null){waiting.Password=true;waiting.Focus=focus;signal.Set();return;}}Post(new Request{Focus=focus,Password=true});}
-  // A password box must get the keys untouched. Browsers are not asked (see Find), so there the user switches by hand.
+  public void CheckPassword(IntPtr focus){lock(gate){if(waiting!=null&&waiting.Focus==focus){waiting.Password=true;signal.Set();return;}}Post(new Request{Focus=focus,Password=true});}
+  // Query focused elements on focus changes as well as typing. Web accessibility
+  // providers need time to initialize before their first caret query.
   static bool IsPassword(IntPtr focus){
    if(focus!=IntPtr.Zero&&Native.ClassOf(focus)=="Edit"&&(Native.GetWindowLongPtr(focus,-16).ToInt64()&0x20)!=0)return true;
-   if(IsBrowser(Native.GetForegroundWindow()))return false;
    try{AutomationElement fe=AutomationElement.FocusedElement;return fe!=null&&fe.Current.IsPassword;}catch{return false;}
   }
-  bool Superseded(){lock(gate)return waiting!=null;}
+  bool Superseded(){lock(gate)return waiting!=null&&waiting.Locate;}
   void Loop(){
    while(!stop){
     signal.WaitOne(500);
@@ -45,14 +53,23 @@ namespace LiveHenkan {
     try{
      if(r.CloseIme)Native.CloseSystemIme(r.Focus);
      if(r.Password&&PasswordFound!=null)PasswordFound(IsPassword(r.Focus),r.Focus);
-     if(r.Locate&&!r.AfterCommit)deliver(Find(r.Focus),r.Session,false);
-     if(r.Style){IntPtr window;StyleInfo style=FindStyle(out window);deliverStyle(style,window!=IntPtr.Zero?window:r.Focus,r.Session);}
+     if(r.Focus!=Native.FocusWindow())continue;
+     if(r.Locate&&!r.AfterCommit){
+      CaretInfo caret;StyleInfo style;FindTarget(r.Focus,out caret,out style);
+      for(int retry=0;!caret.Found&&retry<8&&!Superseded();retry++){
+       Thread.Sleep(50);if(r.Focus!=Native.FocusWindow())break;FindTarget(r.Focus,out caret,out style);
+      }
+      if(r.Focus!=Native.FocusWindow()||Superseded())continue;
+      deliver(caret,r.Session,false);
+      if(r.Style)deliverStyle(style,r.Focus,r.Session);
+     }
      if(!r.AfterCommit)continue;
      // The application takes the text in one character at a time. Wait until its caret has moved and come to rest.
      CaretInfo last=r.Before;bool moved=false;int still=0;
      for(int i=0;i<24&&!stop&&!Superseded();i++){
       Thread.Sleep(20);
       CaretInfo c=Find(r.Focus);
+      if(r.Focus!=Native.FocusWindow())break;
       if(!c.Found)continue;
       if(!c.Same(r.Before))moved=true;
       if(c.Same(last))still++;else still=0;
@@ -62,20 +79,37 @@ namespace LiveHenkan {
     }catch{}
    }
   }
-  static bool IsBrowser(IntPtr window){
-   string cls=Native.ClassOf(window);
-   return cls.StartsWith("Chrome_",StringComparison.Ordinal)||cls.StartsWith("Mozilla",StringComparison.Ordinal);
-  }
   public static CaretInfo Find(IntPtr focusHint){
-   CaretInfo c;IntPtr focus;
-   if(Native.SystemCaret(out c,out focus))return c;
-   if(focus==IntPtr.Zero)focus=focusHint;
-   if(Native.AccessibleCaret(focus,out c))return c;
-   IntPtr fg=Native.GetForegroundWindow();
-   if(fg!=focus&&Native.AccessibleCaret(fg,out c))return c;
-   // Asking a browser through UI Automation switches on its accessibility machinery for good, so it is left alone.
-   if(!IsBrowser(fg)&&AutomationCaret(out c))return c;
-   return new CaretInfo{Found=false,Window=focus};
+   CaretInfo c;StyleInfo style;FindTarget(focusHint,out c,out style);return c;
+  }
+  // A host window can contain several editors (Office's sheet and its web task pane).
+  // Read position and font from the SAME focused element, never from a background document.
+  static void FindTarget(IntPtr focus,out CaretInfo caret,out StyleInfo style){
+   caret=new CaretInfo{Window=focus};style=null;
+   AutomationElement element=null;TextPatternRange selection=null;
+   System.Windows.Rect bounds=System.Windows.Rect.Empty;
+   try{
+    selection=Selection(out element);
+    if(element!=null){
+     if(!element.Current.HasKeyboardFocus)return;
+     bounds=element.Current.BoundingRectangle;
+    }
+    if(selection!=null){
+     style=RangeStyle(selection);
+    }
+   }catch{}
+   style=OfficeStyle.Find(focus,style);
+   CaretInfo native;IntPtr actual;
+   if(Native.SystemCaret(out native,out actual)&&actual==focus&&
+      Native.CaretBelongsToFocus(native.Window,focus)&&CaretGeometry.InBounds(native,bounds)){caret=native;return;}
+   if(Native.AccessibleCaret(focus,out native)&&CaretGeometry.InBounds(native,bounds)){caret=native;return;}
+   StyleInfo caretStyle;
+   if(LiveHenkan.AutomationCaret.Find(focus,out caret,out caretStyle)&&CaretGeometry.InBounds(caret,bounds)){
+    if(caretStyle!=null)style=caretStyle;return;
+   }
+   if(selection!=null&&AutomationCaret(selection,focus,out caret)&&CaretGeometry.InBounds(caret,bounds))return;
+   // Never ask the Office host for a caret when a child editor has focus.
+   caret=new CaretInfo{Window=focus};
   }
   static TextPatternRange Selection(out AutomationElement element){
    element=AutomationElement.FocusedElement;if(element==null)return null;
@@ -83,13 +117,13 @@ namespace LiveHenkan {
    TextPatternRange[] sel=((TextPattern)pattern).GetSelection();
    return sel==null||sel.Length==0?null:sel[0];
   }
-  static bool AutomationCaret(out CaretInfo caret){
+  static bool AutomationCaret(TextPatternRange sel,IntPtr window,out CaretInfo caret){
    caret=new CaretInfo();
    try{
-    AutomationElement fe;TextPatternRange sel=Selection(out fe);if(sel==null)return false;
-    IntPtr window=new IntPtr(fe.Current.NativeWindowHandle);
+    sel=sel.Clone();sel.MoveEndpointByRange(TextPatternRangeEndpoint.End,sel,TextPatternRangeEndpoint.Start);
     System.Windows.Rect[] rects=sel.GetBoundingRectangles();
-    if(rects!=null&&rects.Length>0&&rects[0].Height>0){caret=new CaretInfo{Found=true,Left=(int)rects[0].Left,Top=(int)rects[0].Top,Height=(int)rects[0].Height,Window=window,Source="automation"};return true;}
+    // Some web providers return the entire input box for an empty range. It is not a caret.
+    if(rects!=null&&rects.Length>0&&CaretGeometry.IsCaretRectangle(rects[0])){caret=new CaretInfo{Found=true,Left=(int)rects[0].Left,Top=(int)rects[0].Top,Height=(int)rects[0].Height,Window=window,Source="automation"};return true;}
     // An empty range has no rectangle: measure the character before the caret, then the one after it.
     TextPatternRange before=sel.Clone();
     if(before.MoveEndpointByUnit(TextPatternRangeEndpoint.Start,TextUnit.Character,-1)!=0){
@@ -112,11 +146,15 @@ namespace LiveHenkan {
   public static StyleInfo FindStyle(out IntPtr window){
    window=IntPtr.Zero;
    try{
-    if(IsBrowser(Native.GetForegroundWindow()))return null;
     AutomationElement fe;TextPatternRange sel=Selection(out fe);if(sel==null)return null;
     window=new IntPtr(fe.Current.NativeWindowHandle);
+    return RangeStyle(sel);
+   }catch{return null;}
+  }
+  static StyleInfo RangeStyle(TextPatternRange sel){
+   try{
     object name=sel.GetAttributeValue(TextPattern.FontNameAttribute),size=sel.GetAttributeValue(TextPattern.FontSizeAttribute);
-    if(!(name is string)||!(size is double)||((string)name).Length==0||(double)size<=0)return null;
+    if(!(name is string)||!(size is double)||((string)name).Length==0||!CaretGeometry.ValidPoints((double)size))return null;
     StyleInfo style=new StyleInfo{FontName=(string)name,SizePoints=(double)size};
     style.Ink=Rgb(sel.GetAttributeValue(TextPattern.ForegroundColorAttribute));
     style.Back=Rgb(sel.GetAttributeValue(TextPattern.BackgroundColorAttribute));
@@ -143,7 +181,8 @@ namespace LiveHenkan {
   volatile InputMode mode=InputMode.Alnum; volatile bool secure,quitting;
   readonly HashSet<int> swallowed=new HashSet<int>(); readonly Stopwatch clock=Stopwatch.StartNew();
   bool downOnly; int keysSeen,testKeysSeen,hookWaitMaxMs; double hookMaxMs;
-  int lastSession=-1,rehooks,errors; CaretInfo lastCaret; uint lastHookTick; double lastToggleAt=-1000,keyAt; bool reprobe,inResult;
+  int lastSession=-1,rehooks,errors; CaretInfo lastCaret; uint lastHookTick; double keyAt,lastToggleAt=-1000; bool reprobe,inResult;
+  readonly HashSet<int> modeKeysDown=new HashSet<int>();
   // latency records, guarded by `stamps`
   readonly Dictionary<long,double[]> stamps=new Dictionary<long,double[]>(); readonly List<double> shownMs=new List<double>(),convertedMs=new List<double>();
 
@@ -237,7 +276,7 @@ namespace LiveHenkan {
     CreateTray();
     ready.Set();
     WinForms.Application.Run();
-   }catch(Exception ex){failure=ex.ToString();ready.Set();}
+   }catch(Exception ex){failure=ex.ToString();Log("hook thread error "+ex);ready.Set();}
    finally{
     RemoveHooks();
     if(foregroundHook!=IntPtr.Zero)Native.UnhookWinEvent(foregroundHook);
@@ -264,7 +303,10 @@ namespace LiveHenkan {
    if(quitting)return;
    Native.LastInput info=new Native.LastInput();info.size=(uint)Marshal.SizeOf(typeof(Native.LastInput));
    if(!Native.GetLastInputInfo(ref info))return;
-   if((int)(info.time-lastHookTick)>1500){RemoveHooks();InstallHooks();rehooks++;Log("hooks reinstalled");}
+   if((int)(info.time-lastHookTick)>1500){
+    try{RemoveHooks();InstallHooks();modeKeysDown.Clear();swallowed.Clear();rehooks++;Log("hooks reinstalled");}
+    catch(Exception ex){errors++;Log("hook recovery failed: "+ex.Message);}
+   }
   }
   // Test-mode watch on the hook thread: says what it was doing whenever it stops answering for a while.
   volatile string doing; long doingSince,beatAt;
@@ -291,7 +333,7 @@ namespace LiveHenkan {
    catch(Exception ex){
     errors++;Log("error "+ex);
     try{composer.Abandon();}catch{}
-    if(errors>20)Quit();
+    // A lifetime counter of recoverable failures must not silently turn input off.
    }
    finally{doing=null;}
   }
@@ -302,6 +344,7 @@ namespace LiveHenkan {
    return settings.FullWidthSymbols?Symbols.Map(c):null;
   }
   static bool IsModifier(int vk){return vk==16||vk==17||vk==18||vk==91||vk==92||(vk>=160&&vk<=165);}
+  static int ModeKey(int vk){return vk==0xF4?0xF3:vk;}
 
   IntPtr OnKey(int code,IntPtr wParam,IntPtr lParam){
    if(code>=0&&!quitting){
@@ -318,10 +361,10 @@ namespace LiveHenkan {
       int msg=wParam.ToInt32(),vk=(int)k.vk;
       if(msg==0x100||msg==0x104){
        downOnly=false;
-       if(KeyDown(vk,(int)k.scan)){if(!downOnly)swallowed.Add(vk);swallow=true;}
+       if(KeyDown(vk,(int)k.scan)){if(!downOnly)swallowed.Add(ModeKey(vk));swallow=true;}
        else if(!IsModifier(vk))Passed(Native.Down(17)||Native.Down(18)?15:1);   // a shortcut starts something that takes longer than a letter
       }
-      else if(swallowed.Remove(vk))swallow=true;
+      else{modeKeysDown.Remove(ModeKey(vk));if(swallowed.Remove(ModeKey(vk)))swallow=true;}
      }
     }catch(Exception ex){errors++;Log("key error "+ex);try{composer.Abandon();}catch{}}
     // Windows passes a key on untouched when a hook takes too long, so the slowest answer is worth knowing.
@@ -347,14 +390,19 @@ namespace LiveHenkan {
     return false;
    }
    if(vk==0x1C||vk==0xF2){
+    if(!modeKeysDown.Add(vk))return true;
     // While a word is being typed in Latin letters, the convert key only returns to kana.
     if(mode==InputMode.Kana&&composer.Composing&&composer.LatinMode){composer.EndLatin();return true;}
-    SetMode(InputMode.Kana,true);return true;
+    SetMode(InputMode.Kana,true,"key "+vk.ToString("X2"));return true;
    }
-   if(vk==0x1D){SetMode(InputMode.Alnum,true);return true;}
-   if(((vk==0xF3||vk==0xF4||vk==0x19)&&settings.ToggleWithHankaku)||(vk==0x20&&ctrl&&shift&&!alt&&!win)){
+   if(vk==0x1D){if(modeKeysDown.Add(vk))SetMode(InputMode.Alnum,true,"key "+vk.ToString("X2"));return true;}
+   if(modeKeysDown.Contains(ModeKey(vk)))return true;
+   if(((vk==0xF3||vk==0xF4||vk==0x19)&&settings.ToggleWithHankaku&&!ctrl&&!alt&&!win)||(vk==0x20&&ctrl&&shift&&!alt&&!win&&settings.ToggleWithCtrlShiftSpace)){
+    modeKeysDown.Add(ModeKey(vk));
+    // JIS IME compatibility events can include an immediate release/press pair.
+    // Debounce that pair as well as latching genuine repeated key-down events.
     double now=clock.Elapsed.TotalMilliseconds;
-    if(now-lastToggleAt>60){lastToggleAt=now;SetMode(mode==InputMode.Kana?InputMode.Alnum:InputMode.Kana,true);}
+    if(now-lastToggleAt>60){lastToggleAt=now;SetMode(mode==InputMode.Kana?InputMode.Alnum:InputMode.Kana,true,"key "+vk.ToString("X2")+(ctrl?" Ctrl":"")+(shift?" Shift":""));}
     return true;
    }
    if(mode!=InputMode.Kana||secure)return false;
@@ -410,7 +458,8 @@ namespace LiveHenkan {
   }
 
   // ---- mode ------------------------------------------------------------
-  void SetMode(InputMode m,bool announce){
+  void SetMode(InputMode m,bool announce,string reason="command/menu"){
+   if(m!=mode)Log("mode "+mode+" -> "+m+" ("+reason+")");
    if(m!=mode&&(composer.Composing||composer.Awaiting)){composer.CommitNow();if(inline.Busy)inline.Flush(250);}
    mode=m;
    UpdateTray();ui.Mode(m==InputMode.Kana);
@@ -427,6 +476,7 @@ namespace LiveHenkan {
   void Quit(){Quit(false);}
   void Quit(bool emergency){
    if(quitting)return;quitting=true;
+   Log(emergency?"stop requested: emergency":"stop requested: command/menu");
    try{if(composer.Composing||composer.Awaiting){if(emergency)composer.Abandon();else composer.CommitNow();}}catch{}
    try{inline.Flush(800);}catch{}
    RemoveHooks();
@@ -536,9 +586,7 @@ namespace LiveHenkan {
   public void Submit(Job job,bool cancelRunning){converter.Submit(job,cancelRunning);}
   public void SubmitCandidates(CandRequest request){converter.SubmitCandidates(request);}
   void StartOverlay(int session){
-   CaretInfo c;IntPtr focus;
-   if(Native.SystemCaret(out c,out focus)){lastCaret=c;ui.Caret(c,session,false);probe.Start(focus,session,false);}
-   else{lastCaret=new CaretInfo();probe.Start(focus,session,true);}
+   lastCaret=new CaretInfo();probe.Start(Native.FocusWindow(),session);
   }
   public void ViewChanged(){
    View v=composer.Snapshot();
@@ -646,6 +694,10 @@ namespace LiveHenkan {
   string Answer(string command){
    switch(command){
     case "ping": return "ok";
+    case "display": return testMode?ui.Inspect():"test mode required";
+    case "test-recoverable-error":
+     if(!testMode)return "test mode required";
+     invoker.Invoke((Action)delegate{Guard(delegate{throw new InvalidOperationException("test recovery");});});return "ok";
     case "reset": invoker.Invoke((Action)delegate{composer.Abandon();composer.ResetContext();});return "ok";
     case "state":{
      string result="";

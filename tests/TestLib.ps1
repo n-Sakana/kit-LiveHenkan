@@ -56,6 +56,7 @@ function Start-Resident([string]$Root,[string]$ModelDir,[string]$UserDir='',[swi
  return [pscustomobject]@{Process=$process;StartMs=$started.ElapsedMilliseconds}
 }
 function Stop-Resident($resident){
+ if(!$resident -or !$resident.Process -or $resident.Process.HasExited){return 'none'}
  $null=Send-Resident 'quit'
  if($resident -and $resident.Process){
   if(!$resident.Process.WaitForExit(6000)){Stop-Process -Id $resident.Process.Id -Force -ErrorAction SilentlyContinue;return 'killed'}

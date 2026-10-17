@@ -46,9 +46,11 @@ try{
  Check 'alphanumeric mode leaves the keys alone' ($form.Plain -ceq 'abc 123') $form.Plain
  $D::Key(0x1C);Start-Sleep -Milliseconds 200
  Check 'convert key returns to kana mode' ((Get-ResidentState)['mode'] -eq 'Kana')
- $D::Key(0xF3);Start-Sleep -Milliseconds 200
- Check 'hankaku/zenkaku key toggles' ((Get-ResidentState)['mode'] -eq 'Alnum')
- $D::Key(0xF4);Start-Sleep -Milliseconds 200
+ # VK_DBE_* passed to SendInput synthesizes an unmatched IME command, not a
+ # physical key press/release. VK_KANJI exercises the same toggle with real pairs.
+ $D::Key(0x19);Start-Sleep -Milliseconds 200
+ Check 'kanji toggle key toggles' ((Get-ResidentState)['mode'] -eq 'Alnum')
+ $D::Key(0x19);Start-Sleep -Milliseconds 200
  Check 'and toggles back' ((Get-ResidentState)['mode'] -eq 'Kana')
 
  Fresh

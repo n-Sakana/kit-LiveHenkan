@@ -46,21 +46,19 @@ namespace LiveHenkan {
 
  sealed class OverlayWindow : GhostWindow {
   const double UnderGap=1,UnderWidth=1;
-  static readonly StyleInfo NoStyle=new StyleInfo();
   readonly Border frame=new Border(),under=new Border(); readonly TextBlock text=new TextBlock(); readonly Rectangle endCaret=new Rectangle(),focusBar=new Rectangle();
   int focusStart=-1,focusLength; int placedX,placedY,placedHeight; Color inkColor,backColor,lineColor;
   CaretInfo anchor; int session=-1,anchorSession=-2,sampledSession=-3; bool positioned,inline,holding; double shiftPx,lineDip,padTop; string shown="";
   Color sampled;
-  // What was learnt about each window: the style it publishes, and corrections measured from text that was committed there.
-  readonly Dictionary<IntPtr,StyleInfo> styles=new Dictionary<IntPtr,StyleInfo>();
-  readonly Dictionary<IntPtr,double> learnedScale=new Dictionary<IntPtr,double>();
-  bool measuring; int measureOrigin,measureTop; double measureWidth; IntPtr measureWindow;
+  // A single HWND can host differently styled editors. Styles belong to a composition, never to the HWND.
+  StyleInfo currentStyle;int styleSession=-1;
   readonly DispatcherTimer fallback=new DispatcherTimer(),hold=new DispatcherTimer();
   public bool Composing; readonly DoubleAnimationUsingKeyFrames blink;
+  public string Inspect(){return "visible="+IsVisible+"\tx="+placedX+"\ty="+placedY+"\theight="+placedHeight+"\tfont="+text.FontFamily.Source+"\tfontDip="+text.FontSize.ToString(System.Globalization.CultureInfo.InvariantCulture)+"\tscale="+Scale.ToString(System.Globalization.CultureInfo.InvariantCulture)+"\tanchor="+anchor.Found+"\tsource="+anchor.Source;}
 
   public OverlayWindow(){
    StackPanel row=new StackPanel{Orientation=Orientation.Horizontal};
-   Grid lined=new Grid{VerticalAlignment=VerticalAlignment.Bottom};
+   Grid lined=new Grid{VerticalAlignment=VerticalAlignment.Top};
    under.Child=text;lined.Children.Add(under);
    // The stretch being chosen gets a heavier line and a tint, like the selected clause on macOS.
    focusBar.Height=2;focusBar.HorizontalAlignment=HorizontalAlignment.Left;focusBar.VerticalAlignment=VerticalAlignment.Bottom;focusBar.Visibility=Visibility.Collapsed;
@@ -125,25 +123,19 @@ namespace LiveHenkan {
   // Dresses the text like the document around the caret, so it reads as if it were already in it.
   void StyleInline(CaretInfo c,StyleInfo style){
    inline=true;
-   double scale=Scale,caretDip=c.Height/scale,fontDip,learned;FontFamily family;bool known=style!=null&&style.FontName!=null;
+   double scale=Scale,caretDip=c.Height/scale,fontDip;FontFamily family;bool known=style!=null&&style.FontName!=null;
    if(known){
     family=new FontFamily(style.FontName+", "+JapaneseFallback(style.FontName)+", Yu Gothic UI");
-    fontDip=style.SizePoints*96.0/72.0;
     double spacing=1.2;try{spacing=new FontFamily(style.FontName).LineSpacing;}catch{}
-    // A caret much taller or shorter than the font means the application is zoomed.
-    double ratio=caretDip/(fontDip*spacing);
-    if(ratio>1.3||ratio<0.7)fontDip*=ratio;
-    lineDip=Math.Max(caretDip,fontDip*spacing);
+    fontDip=CaretGeometry.FontDip(style,caretDip,spacing);
+    lineDip=fontDip*spacing;
    }else{
     // Nothing published: a spreadsheet cell is 11 pt Yu Gothic unless the user changed it, anything else is guessed from the caret.
     bool sheet=Native.ClassOf(c.Window).StartsWith("EXCEL",StringComparison.Ordinal);
     family=sheet?new FontFamily("Yu Gothic, Yu Gothic UI, Meiryo UI"):Theme.DocumentFont;
-    fontDip=sheet?11*96.0/72.0:Math.Max(11,Math.Min(40,caretDip*0.76));
+    fontDip=sheet?11*96.0/72.0:CaretGeometry.FontDip(null,caretDip,1.3);
     lineDip=Math.Max(caretDip,fontDip);
    }
-   // What committed text taught about this window: how much wider or narrower the application sets the same characters.
-   // The size is nudged rather than the glyphs stretched; stretched text is drawn heavier than the document's.
-   if(learnedScale.TryGetValue(c.Window,out learned))fontDip*=learned;
    if(sampledSession!=anchorSession){sampled=Sample(c);sampledSession=anchorSession;}
    // The screen is the better witness for the background: some applications publish black for "not set".
    Color back=sampled;
@@ -157,7 +149,7 @@ namespace LiveHenkan {
    text.LineHeight=lineDip;text.LineStackingStrategy=LineStackingStrategy.BlockLineHeight;
    TextOptions.SetTextFormattingMode(text,TextFormattingMode.Ideal);
    under.BorderThickness=new Thickness(0,0,0,UnderWidth);under.Padding=new Thickness(0,0,0,UnderGap);
-   endCaret.Height=caretDip;endCaret.Margin=new Thickness(1,0,0,UnderGap+UnderWidth);
+   endCaret.Height=lineDip;endCaret.Margin=new Thickness(1,0,0,UnderGap+UnderWidth);
   }
   // The colour the document shows around the caret: the most frequent pixel of a thin strip beside it.
   static Color Sample(CaretInfo c){
@@ -177,31 +169,15 @@ namespace LiveHenkan {
    FormattedText ft=new FormattedText(s,System.Globalization.CultureInfo.CurrentUICulture,FlowDirection.LeftToRight,new Typeface(text.FontFamily,text.FontStyle,text.FontWeight,text.FontStretch),text.FontSize,Brushes.Black,null,TextFormattingMode.Ideal);
    return ft.WidthIncludingTrailingWhitespace*Scale;
   }
-  // The caret moved by the real width of what was committed. Compare it with the width drawn here and keep the correction.
-  bool Learn(CaretInfo c){
-   bool usable=measuring&&measureWidth>=12&&Math.Abs(c.Top-measureTop)<=2&&c.Left-measureOrigin>=8;
-   double ratio=usable?(c.Left-measureOrigin)/measureWidth:1;IntPtr window=measureWindow;
-   measuring=false;measureWidth=0;
-   if(!usable||ratio<0.6||ratio>1.6||Math.Abs(ratio-1)<0.012)return false;
-   StyleInfo st;bool published=styles.TryGetValue(window,out st)&&st.FontName!=null;
-   double before;if(!learnedScale.TryGetValue(window,out before))before=1;
-   // With the font known the difference is only spacing and stays small; with a guessed font the size itself may be off.
-   double scale=before*ratio,low=published?0.9:0.6,high=published?1.15:1.6;
-   if(scale<low||scale>high)return false;
-   if(learnedScale.Count>64)learnedScale.Clear();
-   learnedScale[window]=scale;
-   return true;
-  }
   public void SetCaret(CaretInfo c,int forSession,bool afterCommit){
    if(forSession<session)return;
    bool hadInline=inline&&anchorSession==forSession&&anchor.Found;
    if(!c.Found&&hadInline)return;   // keep the place we have
-   bool relearned=afterCommit&&c.Found&&Learn(c);
    anchor=c;anchorSession=forSession;
    if(c.Found){
     shiftPx=0;
-    StyleInfo cached;bool known=styles.TryGetValue(c.Window,out cached);
-    if(!hadInline||relearned)StyleInline(c,known?cached:null);
+    bool known=styleSession==forSession;
+    StyleInline(c,known?currentStyle:null);
     if(!hadInline){holding=!known&&!afterCommit;hold.Stop();if(holding)hold.Start();}
    }else{StylePanel();holding=false;}
    if(Composing&&session==forSession){positioned=true;fallback.Stop();if(!holding){Place();Reveal();}}
@@ -209,8 +185,7 @@ namespace LiveHenkan {
   public void SetStyle(StyleInfo style,IntPtr window,int forSession){
    if(forSession<session&&forSession<anchorSession)return;
    bool ours=anchorSession==forSession&&anchor.Found;
-   IntPtr key=ours?anchor.Window:window;
-   if(key!=IntPtr.Zero){if(styles.Count>64)styles.Clear();styles[key]=style??NoStyle;}
+   currentStyle=style;styleSession=forSession;
    if(ours&&inline)StyleInline(anchor,style);
    if(holding){holding=false;hold.Stop();}
    if(Composing&&positioned&&session==forSession){Place();Reveal();}
@@ -218,13 +193,12 @@ namespace LiveHenkan {
   public void Committed(string committed){
    if(!inline||!anchor.Found||committed.Length==0)return;
    double w=TextWidthPx(committed);
-   if(!measuring){measuring=true;measureOrigin=anchor.Left+(int)Math.Round(shiftPx);measureTop=anchor.Top;measureWindow=anchor.Window;measureWidth=0;}
-   measureWidth+=w;shiftPx+=w;
+   shiftPx+=w;
   }
   public void Apply(View v){
    if(!v.Active){Composing=false;fallback.Stop();hold.Stop();holding=false;shown="";shownFocus=-2;positioned=false;Conceal();return;}
    if(!Composing||v.Session!=session){
-    Composing=true;session=v.Session;shiftPx=0;measuring=false;
+    Composing=true;session=v.Session;shiftPx=0;
     positioned=anchorSession==session;   // the caret may have been reported first
     if(!positioned)fallback.Start();
    }
@@ -237,9 +211,10 @@ namespace LiveHenkan {
    double scale=Scale;int widthPx=(int)Math.Ceiling(ActualWidth*scale),heightPx=(int)Math.Ceiling(ActualHeight*scale);
    int x,y;
    if(inline&&anchor.Found){
-    // The line of text sits on the bottom of the caret; the underline hangs below it.
+    // A native caret can include paragraph leading. Anchor the text at its top;
+    // stretching a line to the full caret height moves the baseline in Word.
     x=anchor.Left+(int)Math.Round(shiftPx);
-    y=anchor.Top+anchor.Height-(int)Math.Round((lineDip+padTop)*scale);
+    y=anchor.Top;
    }else{
     Native.Rect r;IntPtr fg=Native.GetForegroundWindow();
     if(fg!=IntPtr.Zero&&Native.GetWindowRect(fg,out r)&&r.right>r.left){x=r.left+(int)(24*scale);y=r.bottom-heightPx-(int)(28*scale);}
@@ -416,6 +391,7 @@ namespace LiveHenkan {
   }
   public void Stop(){if(dispatcher!=null)dispatcher.BeginInvokeShutdown(DispatcherPriority.Send);if(thread!=null)thread.Join(2000);}
   public Dispatcher Dispatcher{get{return dispatcher;}}
+  public string Inspect(){return (string)dispatcher.Invoke(new Func<string>(delegate{return overlay.Inspect();}));}
   void Post(Action a){dispatcher.BeginInvoke(DispatcherPriority.Send,a);}
   public void Show(View v){
    Volatile.Write(ref pending,v);

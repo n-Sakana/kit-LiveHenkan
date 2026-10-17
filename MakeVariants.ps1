@@ -13,7 +13,7 @@ if(Test-Path -LiteralPath $classicPath){throw "Classic source exists; choose a n
 $bundledSource=Join-Path $PSScriptRoot 'variants\classic'
 if(!(Test-Path -LiteralPath (Join-Path $bundledSource 'MakePortable.ps1') -PathType Leaf)){throw "Classic source is missing: $bundledSource"}
 [IO.Directory]::CreateDirectory($classicPath)|Out-Null
-Get-ChildItem -LiteralPath $bundledSource | Copy-Item -Destination $classicPath -Recurse
+Get-ChildItem -LiteralPath $bundledSource | Where-Object {$_.Name -notin @('temp','user','results')} | Copy-Item -Destination $classicPath -Recurse
 & (Join-Path $classicPath 'MakePortable.ps1') -ModelDir (Split-Path -Parent $model) -Destination (Join-Path $destinationPath 'LiveHenkan-classic')
 & (Join-Path $PSScriptRoot 'MakePortable.ps1') -ModelDir (Split-Path -Parent $model) -Destination (Join-Path $destinationPath 'LiveHenkan-mixed')
 function Hash([string]$path){$sha=[Security.Cryptography.SHA256]::Create();$file=[IO.File]::OpenRead($path);try{return ([BitConverter]::ToString($sha.ComputeHash($file))).Replace('-','')}finally{$file.Dispose();$sha.Dispose()}}

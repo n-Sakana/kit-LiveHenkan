@@ -40,6 +40,11 @@ namespace LiveHenkan.Tests {
   }
 
   static void Text(){
+   Check("web field bounds are not a caret",!CaretGeometry.IsCaretRectangle(new System.Windows.Rect(184,317,793,195)),"empty web textarea regression");
+   Check("zero width UIA caret is valid",CaretGeometry.IsCaretRectangle(new System.Windows.Rect(188,320,0,34)),"");
+   Check("sheet caret outside web editor rejected",!CaretGeometry.InBounds(new CaretInfo{Found=true,Left=100,Top=200,Height=34},new System.Windows.Rect(800,300,400,200)),"");
+   Check("large line box does not enlarge known font",Math.Abs(CaretGeometry.FontDip(new StyleInfo{SizePoints=15},195,1.3)-20)<0.001,"");
+   Check("invalid provider font size rejected",!CaretGeometry.ValidPoints(double.NaN)&&!CaretGeometry.ValidPoints(double.PositiveInfinity),"");
    RomajiTable t=new RomajiTable(tablePath);
    Equal("romaji basic","きょうは",Romaji(t,"kyouha",false));
    Equal("romaji nn","こんにちは",Romaji(t,"konnnichiha",false));

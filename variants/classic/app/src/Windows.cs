@@ -1,4 +1,4 @@
-﻿// Word registration and settings windows, with a shared dark theme built in code.
+// Word registration and settings windows, with a shared dark theme built in code.
 using System;
 using System.IO;
 using System.Text;
@@ -281,6 +281,7 @@ namespace LiveHenkan {
   public SettingsWindow(Settings s,UserDictionary dictionary,Action onChanged,string footer):base("LiveHenkanの設定",440){
    settings=s;dict=dictionary;changed=onChanged;
    Toggle("半角/全角キーで かな と 英数 を切り替える","ToggleWithHankaku");
+   Toggle("Ctrl + Shift + Space で切り替える","ToggleWithCtrlShiftSpace");
    Toggle("オンにしたとき かな入力 から始める","StartInKana");
    Body.Children.Add(Rule());
    Toggle("何も打っていないときの Space を全角にする","FullWidthSpace");

@@ -15,6 +15,7 @@ namespace LiveHenkan {
   public bool WriteIntoDocument=true;     // editors that can take it show the text being typed in the document itself
   public bool Learn=true;                 // remember candidates the user picked
   public bool ToggleWithHankaku=true;
+  public bool ToggleWithCtrlShiftSpace=false; // opt in: Office and editors already use this shortcut
   public bool StartInKana=true;
   public int LiveChars=28,KeepChars=16;   // an open chunk longer than LiveChars is cut down to about KeepChars
   public int HoldChars=24;                // closed text beyond this is committed from the front
@@ -621,9 +622,8 @@ namespace LiveHenkan {
   readonly Thread thread; readonly AutoResetEvent signal=new AutoResetEvent(false);
   readonly object gate=new object(); Job waiting; CandRequest waitingCands; volatile bool stop; volatile int newest;
   readonly Dictionary<string,string> standalone=new Dictionary<string,string>(StringComparer.Ordinal); int standaloneRevision=-1;
-  // Other conversions of a word do not depend on the sentence, so they are kept and prepared ahead while the user pauses.
+  // Other conversions are cached on demand. Pauses in typing must not start a beam search.
   readonly Dictionary<string,List<string>> candidateCache=new Dictionary<string,List<string>>(StringComparer.Ordinal);
-  volatile bool preparing; string prepareReading;
   public double LastMilliseconds,LastCandidateMilliseconds; public int Completed,Cancelled;
   public Converter(Jinen.Engine e,UserDictionary dictionary,Action<ChunkResult> sink,Action<CandResult> candSink){
    engine=e;dict=dictionary;deliver=sink;deliverCands=candSink;
@@ -631,24 +631,17 @@ namespace LiveHenkan {
   }
   public void Submit(Job job,bool cancelRunning){
    lock(gate){waiting=job;newest=job.Version;}
-   if(cancelRunning||preparing)engine.Cancel=true;
+   if(cancelRunning)engine.Cancel=true;
    signal.Set();
   }
   public void SubmitCandidates(CandRequest request){
    lock(gate)waitingCands=request;
-   if(preparing)engine.Cancel=true;
    signal.Set();
   }
   public void Dispose(){stop=true;engine.Cancel=true;signal.Set();thread.Join(1500);}
   void Loop(){
    while(!stop){
-    bool signalled=signal.WaitOne(prepareReading!=null?130:250);
-    if(!signalled&&prepareReading!=null&&!stop){
-     // Nothing was typed for a moment: have the candidates of the last word ready before Space is pressed.
-     string reading=prepareReading;prepareReading=null;
-     bool busy;lock(gate)busy=waiting!=null||waitingCands!=null;
-     if(!busy){preparing=true;engine.Cancel=false;try{Alternatives(reading);}catch{}finally{preparing=false;}}
-    }
+    signal.WaitOne();
     while(!stop){
      Job job;CandRequest cands=null;
      lock(gate){job=waiting;waiting=null;if(job==null){cands=waitingCands;waitingCands=null;}}
@@ -673,15 +666,8 @@ namespace LiveHenkan {
     sw.Stop();LastMilliseconds=sw.Elapsed.TotalMilliseconds;Completed++;
     deliver(new ChunkResult{Version=job.Version,Id=c.Id,Reading=c.Reading,Context=context,Surface=surface,Align=align,Milliseconds=LastMilliseconds});
     ctx+=surface;
-    prepareReading=LastHead(c.Reading,align);
     if(newest!=job.Version)return;   // a newer job is waiting and repeats whatever is still needed
    }
-  }
-  // The word of the last stretch of a conversion: what Space would ask about.
-  static string LastHead(string reading,Alignment align){
-   if(align==null||!align.Ok)return reading.Length<=12?reading:null;
-   List<int> starts=align.SegmentStarts();int from=starts[starts.Count-1],to=align.HeadEnd(from,reading.Length);
-   return to>from&&to-from<=24?reading.Substring(from,to-from):null;
   }
   // The model's conversions of `reading` on its own, most likely first. Null when a typed key cut the search short.
   List<string> Alternatives(string reading){
