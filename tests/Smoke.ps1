@@ -4,7 +4,7 @@ param([string]$ModelDir='',[string]$Root='')
 Initialize-Tests
 if(!$Root){$Root=$script:Repo}
 $modelDir=if(Test-Path -LiteralPath (Join-Path $Root 'xsmall.jinen')){''}else{Get-TestModelDir $ModelDir}
-$D=[LiveHenkan.Tests.Driver]
+$D=[Henkan.Tests.Driver]
 $resident=$null;$notepad=$null
 function Zoom([string]$name){
  $r=$D::Rect($notepad.Hwnd)

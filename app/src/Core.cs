@@ -5,11 +5,12 @@ using System.Threading;
 using System.Diagnostics;
 using System.Collections.Generic;
 
-namespace LiveHenkan {
+namespace Henkan {
  public sealed class Settings {
   public bool FullWidthSpace=true;        // Space with nothing typed: full-width, as on macOS and MS-IME
   public bool FullWidthSymbols=true;      // ( ) : ; etc. typed in kana mode
   public bool FullWidthDigits=false;
+  public bool FormatNumbers=true;        // reversible date/time/quantity suggestions
   public bool WesternPunctuation=false;   // ，． instead of 、。
   public bool CommitAtSentenceEnd=true;   // the sentence before is committed once the next one is started
   public bool WriteIntoDocument=true;     // editors that can take it show the text being typed in the document itself
@@ -56,6 +57,7 @@ namespace LiveHenkan {
  public sealed class Seg {
   public List<Unit> Units=new List<Unit>(); public string Reading="",Surface="";
   public string Original;         // what live conversion showed; null when the stretch was re-cut by hand
+  public string Unformatted;      // preserved surface before numeric presentation; never learned
   public string Head="",TailText="";  // candidates are asked for Head only; TailText (a particle) is put back behind each
   public List<Cand> Cands; public int Selected; public bool Loading,Picked;
   public int VariantKind=-1,VariantStep;
@@ -97,6 +99,7 @@ namespace LiveHenkan {
   List<Seg> segs; int focus,candVersion,pendingAdvance,tailId=-1; bool listOpen;
   string contextLeft=""; bool kanaOnly,awaiting,awaitCommit,candWaiting,replaying,forcing; KeyEvt resumeKey;
   int nextId=1,version,session; long serial; int committedChars;
+  DateTime formatDate; string formatInput,formatLeft; FormatResult formatCache;
   public int Commits,Conversions;
   public Func<char,string> SymbolMap;
   public bool DirectKana;   // conversion is off: the reading box of the word window wants the kana itself
@@ -127,7 +130,14 @@ namespace LiveHenkan {
    if(segs!=null){foreach(Seg s in segs)b.Append(s.Surface);return b.ToString();}
    foreach(Chunk c in chunks)b.Append(Display(c));
    b.Append(roma.Pending);
-   return b.ToString();
+   return Format(b.ToString(),contextLeft).Text;
+  }
+  FormatResult Format(string text,string left){
+   if(Plain||!settings.FormatNumbers||settings.FullWidthDigits)return new FormatResult{Source=text,Text=text};
+   if(formatCache==null||formatInput!=text||formatLeft!=left){
+    formatInput=text;formatLeft=left;formatCache=NumericFormatting.Apply(text,left,formatDate);
+   }
+   return formatCache;
   }
   public View Snapshot(){
    View v=new View{Active=Composing,Serial=serial,Session=session,CommittedChars=committedChars};
@@ -144,6 +154,15 @@ namespace LiveHenkan {
 
   // ---- conversion requests --------------------------------------------
   void SyncOpen(){
+   // Numeric separators must not become Japanese punctuation (slash normally
+   // produces a middle dot, and minus a long-vowel mark). Reading boxes keep
+   // their usual romaji mapping; ordinary prose punctuation is unchanged.
+   for(int i=0;!DirectKana&&i+1<roma.Units.Count;i++){
+    Unit u=roma.Units[i],after=roma.Units[i+1];
+    bool beforeDigit=i>0&&roma.Units[i-1].Text.Length>0&&Kana.IsDigit(roma.Units[i-1].Text[roma.Units[i-1].Text.Length-1]);
+    bool signedStart=u.Raw=="-"&&(i==0||" （(：:".IndexOf(roma.Units[i-1].Text[roma.Units[i-1].Text.Length-1])>=0);
+    if(!u.English&&u.Raw.Length==1&&".,/:-".IndexOf(u.Raw[0])>=0&&(beforeDigit||signedStart)&&after.Text.Length>0&&Kana.IsDigit(after.Text[0]))roma.Units[i]=new Unit(u.Raw,u.Raw);
+   }
    if(SymbolMap!=null)for(int i=0;i<roma.Units.Count;i++){Unit u=roma.Units[i];if(!u.English&&u.Text.Length==1){string m=SymbolMap(u.Text[0]);if(m!=null)roma.Units[i]=new Unit(m,u.Raw);}}
    Chunk o=Open;if(o!=null){o.Units=new List<Unit>(roma.Units);o.Recount();}
   }
@@ -182,13 +201,14 @@ namespace LiveHenkan {
    Chunk o=Open;
    if(o!=null&&!Plain&&roma.Pending.Length==0&&o.Reading.Length>settings.LiveChars&&o.Surface!=null&&o.ConvReading==o.Reading&&o.Align!=null&&o.Align.Ok){
     List<int> starts=o.Align.SegmentStarts();int cut=0;
-    foreach(int s in starts)if(s>0&&o.Reading.Length-s>=settings.KeepChars&&UnitBoundary(o.Units,s))cut=s;
-    if(cut==0)foreach(int s in starts)if(s>0&&o.Reading.Length-s>=4&&UnitBoundary(o.Units,s)){cut=s;break;}
+    foreach(int s in starts)if(s>0&&o.Reading.Length-s>=settings.KeepChars&&SafeCut(o,s))cut=s;
+    if(cut==0)foreach(int s in starts)if(s>0&&o.Reading.Length-s>=4&&SafeCut(o,s)){cut=s;break;}
     if(cut>0)Split(o,cut);
    }
    Overflow();
   }
   static bool UnitBoundary(List<Unit> units,int offset){int n=0;foreach(Unit u in units){if(n==offset)return true;n+=u.Text.Length;}return n==offset;}
+  static bool SafeCut(Chunk c,int offset){return UnitBoundary(c.Units,offset)&&NumericFormatting.SafeBoundary(c.Surface,c.Align.SurfaceFor(0,offset).Length);}
   void Split(Chunk o,int cut){
    Chunk head=new Chunk{Id=nextId++,Closed=true};int n=0,count=0;
    foreach(Unit u in o.Units){if(n>=cut)break;head.Units.Add(u);n+=u.Text.Length;count++;}
@@ -208,7 +228,10 @@ namespace LiveHenkan {
     int held=0;for(int i=0;i<chunks.Count-1;i++)held+=Display(chunks[i]).Length;
     bool sentence=settings.CommitAtSentenceEnd&&first.Reading.Length>0&&Kana.IsSentenceEnd(first.Reading[first.Reading.Length-1]);
     if(!sentence&&held<=settings.HoldChars)return;
-    string text=Display(first);
+    string source=Display(first);StringBuilder all=new StringBuilder();foreach(Chunk c in chunks)all.Append(Display(c));all.Append(roma.Pending);
+    FormatResult formatted=Format(all.ToString(),contextLeft);
+    foreach(FormatEdit e in formatted.Edits)if(e.Start<source.Length&&e.End>source.Length)return;
+    string text=formatted.Slice(0,source.Length);
     chunks.RemoveAt(0);
     host.Commit(text);Commits++;committedChars+=text.Length;
     contextLeft=Tail(contextLeft+text,ContextChars*2);
@@ -216,7 +239,7 @@ namespace LiveHenkan {
   }
 
   // ---- commit ----------------------------------------------------------
-  void Clear(){chunks.Clear();roma.Clear();segs=null;listOpen=false;pendingAdvance=0;candWaiting=false;tailId=-1;kanaOnly=false;committedChars=0;}
+  void Clear(){chunks.Clear();roma.Clear();segs=null;listOpen=false;pendingAdvance=0;candWaiting=false;tailId=-1;kanaOnly=false;committedChars=0;formatCache=null;formatInput=null;formatLeft=null;}
   void CommitAll(){
    if(segs!=null){
     // Picking another candidate from the list is a correction worth remembering.
@@ -352,12 +375,13 @@ namespace LiveHenkan {
   }
   Decision OnChar(char c){
    roma.Mixed=DirectKana?null:mixed;
-   if(!Composing){chunks.Add(new Chunk{Id=nextId++});committedChars=0;session++;}
+   if(!Composing){chunks.Add(new Chunk{Id=nextId++});committedChars=0;session++;formatDate=Now().Date;formatCache=null;}
    kanaOnly=false;
    Chunk o=Open;
    if(o==null){o=new Chunk{Id=nextId++};chunks.Add(o);}
    // A new sentence starts its own chunk, so the one before stops changing.
-   if(roma.Pending.Length==0&&o.Reading.Length>0&&Kana.IsSentenceEnd(o.Reading[o.Reading.Length-1])&&!IsCloser(c)){
+   bool decimalContinues=!DirectKana&&Kana.IsDigit(c)&&o.Reading.Length>=2&&roma.Units.Count>=2&&roma.Units[roma.Units.Count-1].Raw=="."&&Kana.IsDigit(o.Reading[o.Reading.Length-2]);
+   if(roma.Pending.Length==0&&o.Reading.Length>0&&Kana.IsSentenceEnd(o.Reading[o.Reading.Length-1])&&!IsCloser(c)&&!decimalContinues){
     o.Closed=true;roma.Clear();o=new Chunk{Id=nextId++};chunks.Add(o);
    }
    roma.Push(c);
@@ -469,14 +493,33 @@ namespace LiveHenkan {
     Segment(list,c.Units,c.Reading,converted?c.Surface:Display(c),converted?c.Align:null);
    }
    if(list.Count==0)list.Add(new Seg());
+   list=FormatSegments(list,contextLeft);
    chunks.Clear();roma.Clear();kanaOnly=false;
    segs=list;focus=list.Count-1;listOpen=false;pendingAdvance=0;
   }
-  void MergeAll(){
-   Seg all=new Seg();StringBuilder b=new StringBuilder();
-   foreach(Seg s in segs){all.Units.AddRange(s.Units);b.Append(s.Surface);}
-   all.Recount();all.Head=all.Reading;all.Surface=b.ToString();all.Original=null;
-   segs=new List<Seg>{all};focus=0;
+  List<Seg> FormatSegments(List<Seg> list,string left){
+   StringBuilder b=new StringBuilder();foreach(Seg s in list)b.Append(s.Surface);
+   FormatResult formatted=Format(b.ToString(),left);if(formatted.Edits.Count==0)return list;
+   int[] starts=new int[list.Count+1];for(int i=0;i<list.Count;i++)starts[i+1]=starts[i]+list[i].Surface.Length;
+   List<Seg> result=new List<Seg>();
+   for(int i=0;i<list.Count;i++){
+    int last=i;bool changed=false,extend;
+    do{
+     extend=false;
+     foreach(FormatEdit edit in formatted.Edits){
+      if(edit.Start>=starts[last+1]||edit.End<=starts[i])continue;
+      changed=true;
+      while(last+1<list.Count&&edit.End>starts[last+1]){last++;extend=true;}
+     }
+    }while(extend);
+    if(!changed){result.Add(list[i]);continue;}
+    Seg combined=new Seg();for(int j=i;j<=last;j++)combined.Units.AddRange(list[j].Units);
+    combined.Recount();combined.Head=combined.Reading;
+    combined.Unformatted=formatted.Source.Substring(starts[i],starts[last+1]-starts[i]);
+    combined.Surface=combined.Original=formatted.Slice(starts[i],starts[last+1]-starts[i]);
+    result.Add(combined);i=last;
+   }
+   return result;
   }
   string LeftContext(){
    StringBuilder b=new StringBuilder(contextLeft);
@@ -487,12 +530,13 @@ namespace LiveHenkan {
    if(string.IsNullOrEmpty(text))return;
    foreach(Cand c in list)if(c.Text==text){if(c.Note.Length==0&&note=="登録語")c.Note=note;return;}
    // Width forms are picked for one spot, not as the way a word should be written from now on.
-   list.Add(new Cand(text,note){Learnable=note!="半角カナ"&&note!="全角英数"&&note!="半角英数"&&note!="日付"});
+   list.Add(new Cand(text,note){Learnable=note!="半角カナ"&&note!="全角英数"&&note!="半角英数"&&note!="日付"&&note!="整形"&&note!="元の形"});
   }
   // What can be offered without the model: the text shown now, the user's words, and the kana and Latin forms.
   List<Cand> Compose(Seg s,List<string> model){
    List<Cand> list=new List<Cand>();
-   if(s.Original!=null)AddCand(list,s.Original,"");
+   if(s.Original!=null)AddCand(list,s.Original,s.Unformatted!=null?"整形":"");
+   if(s.Unformatted!=null)AddCand(list,s.Unformatted,"元の形");
    if(dict!=null){
     List<Entry> found=dict.Find(s.Reading);if(found!=null)foreach(Entry e in found)AddCand(list,e.Surface,e.Learned?"":"登録語");
     if(s.TailText.Length>0){found=dict.Find(s.Head);if(found!=null)foreach(Entry e in found)AddCand(list,e.Surface+s.TailText,e.Learned?"":"登録語");}
@@ -526,6 +570,11 @@ namespace LiveHenkan {
   }
   void Load(Seg s){
    if(s.Cands!=null||s.Loading)return;
+   if(s.Unformatted!=null){
+    s.Cands=Compose(s,null);
+    if(pendingAdvance!=0){int d=pendingAdvance;pendingAdvance=0;Move(d);}
+    return;
+   }
    s.Loading=true;candWaiting=true;
    host.SubmitCandidates(new CandRequest{Version=++candVersion,Context=LeftContext(),Reading=s.Head});
    host.Await(900);
@@ -584,7 +633,7 @@ namespace LiveHenkan {
     tail.Recount();tail.Head=tail.Reading;tail.Surface=tail.Reading;tail.Original=null;
     segs.RemoveRange(focus+1,segs.Count-focus-1);segs.Add(tail);
    }
-   f.Recount();f.Head=f.Reading;f.TailText="";f.Surface=f.Reading;f.Original=null;f.Cands=null;f.Loading=false;f.Picked=false;f.VariantKind=-1;f.LanguageChoice=-1;f.Selected=0;
+   f.Recount();f.Head=f.Reading;f.TailText="";f.Surface=f.Reading;f.Original=null;f.Unformatted=null;f.Cands=null;f.Loading=false;f.Picked=false;f.VariantKind=-1;f.LanguageChoice=-1;f.Selected=0;
    listOpen=false;pendingAdvance=0;tailId=focus+1<segs.Count?-2:-1;
    Load(f);
   }
@@ -604,6 +653,7 @@ namespace LiveHenkan {
    if(tail.Reading!=r.Reading)return;
    List<Seg> cut=new List<Seg>();
    Segment(cut,tail.Units,tail.Reading,r.Surface,r.Align);
+   cut=FormatSegments(cut,r.Context);
    segs.RemoveAt(focus+1);segs.AddRange(cut);tailId=-1;
    Changed();
   }

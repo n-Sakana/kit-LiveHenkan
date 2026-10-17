@@ -4,7 +4,7 @@ using System.IO;
 using System.Text;
 using System.Collections.Generic;
 
-namespace LiveHenkan {
+namespace Henkan {
  public sealed class LanguageMemory {
   readonly string path; readonly object gate=new object();
   Dictionary<string,bool> choices=new Dictionary<string,bool>(StringComparer.OrdinalIgnoreCase);

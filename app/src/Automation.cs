@@ -3,7 +3,7 @@
 using System;
 using System.Runtime.InteropServices;
 
-namespace LiveHenkan {
+namespace Henkan {
  static class AutomationCaret {
   // Prefixes of SDK interfaces; unused slots are deliberately never called.
   [ComImport,Guid("30cbe57d-d9d0-452a-ab13-7ac5ac4825ee"),InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
@@ -44,7 +44,8 @@ namespace LiveHenkan {
      if(name is string&&size is double&&CaretGeometry.ValidPoints((double)size)){
       style=new StyleInfo{FontName=(string)name,SizePoints=(double)size};
       object ink=range.GetAttributeValue(40008),back=range.GetAttributeValue(40001),weight=range.GetAttributeValue(40007);
-      if(ink is int)style.Ink=Rgb((int)ink);if(back is int)style.Back=Rgb((int)back);style.Bold=weight is int&&(int)weight>=600;
+      if(ink is int)style.Ink=Rgb((int)ink);if(back is int)style.Back=Rgb((int)back);style.ReadWeight(weight);
+      try{object italic=range.GetAttributeValue(40014);style.Italic=italic is bool&&(bool)italic;}catch{}
      }
     }catch{} // Font attributes are optional; keep a valid caret even if a provider rejects them.
     return focus==Native.FocusWindow();

@@ -8,7 +8,7 @@ function Get-Sha256([string]$path){
  try{return ([BitConverter]::ToString($sha.ComputeHash($stream))).Replace('-','')}finally{$stream.Dispose();$sha.Dispose()}
 }
 $model=Resolve-Model -Root $PSScriptRoot -ModelDir $ModelDir
-if(!$Destination){$Destination=Join-Path $PSScriptRoot 'dist\LiveHenkan'}
+if(!$Destination){$Destination=Join-Path $PSScriptRoot 'dist\Henkan'}
 $destinationPath=[IO.Path]::GetFullPath($Destination)
 if(Test-Path -LiteralPath $destinationPath){
  # Only a folder this script made earlier is ever replaced.

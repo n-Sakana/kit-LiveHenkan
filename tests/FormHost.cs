@@ -3,7 +3,7 @@ using System;
 using System.Threading;
 using System.Windows.Forms;
 
-namespace LiveHenkan.Tests {
+namespace Henkan.Tests {
  // The rich edit control of msftedit.dll (class RICHEDIT50W), which many programs use; Windows Forms on its own
  // still creates the older one (RichEdit20W).
  sealed class ModernRichBox : RichTextBox {
@@ -17,7 +17,7 @@ namespace LiveHenkan.Tests {
   public FormHost():this(160,160){}
   public FormHost(int left,int top){
    thread=new Thread(delegate(){
-    form=new Form{Text="LiveHenkan test form",Width=560,Height=360,StartPosition=FormStartPosition.Manual,Left=left,Top=top,TopMost=true};
+    form=new Form{Text="Henkan test form",Width=560,Height=360,StartPosition=FormStartPosition.Manual,Left=left,Top=top,TopMost=true};
     plain=new TextBox{Left=20,Top=20,Width=500,Font=new System.Drawing.Font("Yu Gothic UI",12f)};
     secret=new TextBox{Left=20,Top=80,Width=500,UseSystemPasswordChar=true,Font=new System.Drawing.Font("Yu Gothic UI",12f)};
     plain.MouseDown+=delegate(object o,MouseEventArgs e){Mouse+="D"+e.Clicks;};plain.MouseUp+=delegate{Mouse+="U";};plain.DoubleClick+=delegate{Mouse+="X";};

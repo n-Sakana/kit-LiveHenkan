@@ -2,10 +2,10 @@ param([string]$ModelDir='',[string]$Out='',[int]$Threads=0,[switch]$SkipSmall)
 # Measures engine speed by thread count, delay per keystroke, candidate delay, accuracy of both models.
 # No windows are opened. Takes several minutes.
 . (Join-Path $PSScriptRoot 'TestLib.ps1')
-if(!('LiveHenkan.Tests.Measure' -as [type])){
+if(!('Henkan.Tests.Measure' -as [type])){
  $temp=Join-Path $script:Repo 'temp';[IO.Directory]::CreateDirectory($temp)|Out-Null;$env:TEMP=$temp;$env:TMP=$temp
- $null=Build-LiveHenkan -App (Join-Path $script:Repo 'app') -Extra @((Join-Path $PSScriptRoot 'Headless.cs'),(Join-Path $PSScriptRoot 'Driver.cs'),(Join-Path $PSScriptRoot 'Measure.cs'))
- [LiveHenkan.Native]::PrepareProcess()
+ $null=Build-Henkan -App (Join-Path $script:Repo 'app') -Extra @((Join-Path $PSScriptRoot 'Headless.cs'),(Join-Path $PSScriptRoot 'Driver.cs'),(Join-Path $PSScriptRoot 'Measure.cs'))
+ [Henkan.Native]::PrepareProcess()
 }
 $dir=Get-TestModelDir $ModelDir
 if(!$Out){$Out=Join-Path $script:Results 'measure'}
@@ -13,12 +13,12 @@ if(!$Out){$Out=Join-Path $script:Results 'measure'}
 $table=Join-Path $script:Repo 'app\romaji.tsv'
 $scratch=Join-Path $script:Results 'measure-user'
 if($Threads -le 0){$n=[Environment]::ProcessorCount;$Threads=if($n -le 4){2}elseif($n -le 8){3}elseif($n -le 12){4}else{5}}
-$M=[LiveHenkan.Tests.Measure]
+$M=[Henkan.Tests.Measure]
 $xsmall=Join-Path $dir 'xsmall.jinen';$small=Join-Path $dir 'small.jinen'
 function Rows($sentences){@($sentences|ForEach-Object{[pscustomobject]@{Reading=$_.Reading;Accept=($_.Accept -join '|');Got=$_.Got;Ok=$_.Ok}})}
 function Corpus36{
  $all=Get-Content -LiteralPath (Join-Path $script:Repo 'fixtures\corpus36.json') -Raw -Encoding UTF8|ConvertFrom-Json
- ,@($all|ForEach-Object{$s=New-Object LiveHenkan.Tests.Sentence;$s.Reading=$_.reading;$s.Accept=@($_.expected);$s})
+ ,@($all|ForEach-Object{$s=New-Object Henkan.Tests.Sentence;$s.Reading=$_.reading;$s.Accept=@($_.expected);$s})
 }
 $report=[ordered]@{At=(Get-Date).ToString('s');Machine=(Get-CimInstance Win32_Processor).Name;LogicalProcessors=[Environment]::ProcessorCount;Threads=$Threads}
 

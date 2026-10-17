@@ -1,14 +1,14 @@
 param([string]$Root=(Split-Path -Parent $PSScriptRoot),[string]$ModelDir,[string]$Label='current',[switch]$SkipMeasures,[switch]$Shortcut)
 # Real hooks, held switching keys, application shortcut, on/off CPU, and cleanup of only our own windows.
 . (Join-Path $PSScriptRoot 'TestLib.ps1')
-$null=Build-LiveHenkan -App (Join-Path $Root 'app') -Extra @((Join-Path $PSScriptRoot 'Driver.cs'),(Join-Path $PSScriptRoot 'FormHost.cs'))
-[LiveHenkan.Native]::PrepareProcess()
-$D=[LiveHenkan.Tests.Driver];$N=[LiveHenkan.Native]
+$null=Build-Henkan -App (Join-Path $Root 'app') -Extra @((Join-Path $PSScriptRoot 'Driver.cs'),(Join-Path $PSScriptRoot 'FormHost.cs'))
+[Henkan.Native]::PrepareProcess()
+$D=[Henkan.Tests.Driver];$N=[Henkan.Native]
 $checks=New-Object System.Collections.Generic.List[object]
 function Check($name,$ok,$detail=''){$checks.Add([pscustomobject]@{Name=$name;Ok=[bool]$ok;Detail=$detail});"$ok $name $detail"}
 $resident=$null;$form=$null;$measurements=@()
 try {
- $form=New-Object LiveHenkan.Tests.FormHost
+ $form=New-Object Henkan.Tests.FormHost
  $null=$D::Activate($form.Hwnd);$D::TargetWindow=$form.Hwnd;$form.FocusPlain()
  if(!$SkipMeasures){
   $N::CloseSystemIme($N::FocusWindow());$p=[Diagnostics.Process]::GetCurrentProcess();$start=$p.TotalProcessorTime.TotalMilliseconds;$watch=[Diagnostics.Stopwatch]::StartNew()

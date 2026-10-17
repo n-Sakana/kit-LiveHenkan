@@ -7,7 +7,7 @@ $ErrorActionPreference='Stop'
 $s=Get-Strings
 try{
  $root=Split-Path -Parent $PSScriptRoot
- Register-LiveHenkanMenu -App $PSScriptRoot -Strings $s
+ Register-HenkanMenu -App $PSScriptRoot -Strings $s
  if(!$Quiet){
   Write-Host ''
   Write-Host $s['install.done'] -ForegroundColor Green

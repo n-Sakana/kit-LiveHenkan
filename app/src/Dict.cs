@@ -5,7 +5,7 @@ using System.Text;
 using System.Threading;
 using System.Collections.Generic;
 
-namespace LiveHenkan {
+namespace Henkan {
  public sealed class Entry {
   public string Reading,Surface,Comment="";
   public string From;      // learnt entries: the conversion the user turned down

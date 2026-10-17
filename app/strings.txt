@@ -1,18 +1,19 @@
 # スクリプトが表示する文言。UTF-8 で保存する。
-title=LiveHenkan
-menu.root=LiveHenkan
+title=Henkan
+start.running=別の版が起動しています。その版を終了してからHenkanを開始してください。
+menu.root=Henkan
 menu.on=Turn on
 menu.off=Turn off
 menu.word=Add a word
 menu.settings=Settings
-start.failed=LiveHenkanを開始できませんでした。
-install.done=LiveHenkan was added to the right-click menu.
-install.where=Right-click an empty area of the desktop or of a folder and choose LiveHenkan > Turn on.
+start.failed=Henkanを開始できませんでした。
+install.done=Henkan was added to the right-click menu.
+install.where=Right-click an empty area of the desktop or of a folder and choose Henkan > Turn on.
 install.win11=On Windows 11, the menu is under "Show more options".
 install.model.missing=The model xsmall.jinen is not in this folder. Copy the whole distributed folder.
 install.failed=Could not register:
-uninstall.stopping=Stopping the running LiveHenkan.
-uninstall.done=LiveHenkan was removed from the right-click menu. No registration is left in the registry.
+uninstall.stopping=Stopping the running Henkan.
+uninstall.done=Henkan was removed from the right-click menu. No registration is left in the registry.
 uninstall.none=No registration was found.
 uninstall.kept=Your words and settings are kept in the user folder. Delete that folder if you no longer need them.
 uninstall.failed=Could not remove the registration:

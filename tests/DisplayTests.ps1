@@ -2,7 +2,7 @@ param([string]$ModelDir,[string]$Root=(Split-Path -Parent $PSScriptRoot),[string
 # One self-created local Edge page; no submission, network, user documents or registration.
 . (Join-Path $PSScriptRoot 'TestLib.ps1')
 Initialize-Tests
-$D=[LiveHenkan.Tests.Driver]
+$D=[Henkan.Tests.Driver]
 $checks=New-Object System.Collections.Generic.List[object]
 function Check($name,$ok,$detail=''){$checks.Add([pscustomobject]@{Name=$name;Ok=[bool]$ok;Detail=$detail});"$ok $name $detail"}
 function Display {

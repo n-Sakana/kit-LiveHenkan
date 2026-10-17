@@ -8,10 +8,10 @@ if($PSVersionTable.PSVersion.Major -ne 5 -or ![Environment]::Is64BitProcess){thr
 [IO.Directory]::CreateDirectory($script:Results)|Out-Null
 
 function Initialize-Tests {
- if(!('LiveHenkan.Tests.Driver' -as [type])){
+ if(!('Henkan.Tests.Driver' -as [type])){
   $temp=Join-Path $script:Repo 'temp';[IO.Directory]::CreateDirectory($temp)|Out-Null;$env:TEMP=$temp;$env:TMP=$temp
-  $null=Build-LiveHenkan -App (Join-Path $script:Repo 'app') -Extra @((Join-Path $PSScriptRoot 'Headless.cs'),(Join-Path $PSScriptRoot 'Driver.cs'))
-  [LiveHenkan.Native]::PrepareProcess()
+  $null=Build-Henkan -App (Join-Path $script:Repo 'app') -Extra @((Join-Path $PSScriptRoot 'Headless.cs'),(Join-Path $PSScriptRoot 'Driver.cs'))
+  [Henkan.Native]::PrepareProcess()
  }
 }
 
@@ -26,7 +26,7 @@ function Get-TestModelDir([string]$ModelDir){
 function Start-Resident([string]$Root,[string]$ModelDir,[string]$UserDir='',[switch]$Real){
  if($null -ne (Send-Resident 'ping' 200)){throw 'A resident is already running; stop it first.'}
  $ps=Join-Path $env:WINDIR 'System32\WindowsPowerShell\v1.0\powershell.exe'
- $arguments='-NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -WindowStyle Hidden -File "{0}" -Command on' -f (Join-Path $Root 'app\LiveHenkan.ps1')
+ $arguments='-NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -WindowStyle Hidden -File "{0}" -Command on' -f (Join-Path $Root 'app\Henkan.ps1')
  # -Real leaves out the test mode: no tagged test input is accepted and the test-only watch thread does not run.
  if(!$Real){$arguments+=' -Test'}
  if($ModelDir){$arguments+=' -ModelDir "{0}"' -f $ModelDir}
@@ -111,28 +111,28 @@ function Open-TestNotepad([string]$Content='') {
  if($new.Count -ne 1){throw 'Could not identify our own Notepad'}
  Start-Sleep -Milliseconds 500
  $hwnd=$new[0].MainWindowHandle.ToInt64()
- [LiveHenkan.Tests.Driver]::Move($hwnd,120,120,900,520)
- if(![LiveHenkan.Tests.Driver]::Activate($hwnd)){throw 'Could not activate our Notepad'}
- $field=[LiveHenkan.Tests.Driver]::FindClass($hwnd,'RichEditD2DPT')
+ [Henkan.Tests.Driver]::Move($hwnd,120,120,900,520)
+ if(![Henkan.Tests.Driver]::Activate($hwnd)){throw 'Could not activate our Notepad'}
+ $field=[Henkan.Tests.Driver]::FindClass($hwnd,'RichEditD2DPT')
  if(!$field){throw 'Notepad editor not found'}
  $field.SetFocus()
  Start-Sleep -Milliseconds 200
  return [pscustomobject]@{Pid=$new[0].Id;Hwnd=$hwnd;Field=$field}
 }
-function Read-TestNotepad($notepad){return ([LiveHenkan.Tests.Driver]::Read($notepad.Field)).TrimEnd([char[]]"`r`n")}
+function Read-TestNotepad($notepad){return ([Henkan.Tests.Driver]::Read($notepad.Field)).TrimEnd([char[]]"`r`n")}
 # The same with one line feed between lines, whatever the editor uses.
-function Read-TestNotepadLines($notepad){return ([LiveHenkan.Tests.Driver]::Read($notepad.Field)).Replace("`r`n","`n").Replace("`r","`n")}
+function Read-TestNotepadLines($notepad){return ([Henkan.Tests.Driver]::Read($notepad.Field)).Replace("`r`n","`n").Replace("`r","`n")}
 function Clear-TestNotepad($notepad){
- if([LiveHenkan.Tests.Driver]::Foreground() -ne $notepad.Hwnd){$null=[LiveHenkan.Tests.Driver]::Activate($notepad.Hwnd)}
+ if([Henkan.Tests.Driver]::Foreground() -ne $notepad.Hwnd){$null=[Henkan.Tests.Driver]::Activate($notepad.Hwnd)}
  $notepad.Field.SetFocus()
  # Verify that Ctrl+A and Backspace cleared the text; retry with a longer interval if needed.
  for($try=0;$try -lt 4;$try++){
-  [LiveHenkan.Tests.Driver]::OwnKey(65,$false,$true);if($try -gt 0){Start-Sleep -Milliseconds 150}
-  [LiveHenkan.Tests.Driver]::OwnKey(8,$false,$false)
+  [Henkan.Tests.Driver]::OwnKey(65,$false,$true);if($try -gt 0){Start-Sleep -Milliseconds 150}
+  [Henkan.Tests.Driver]::OwnKey(8,$false,$false)
   Start-Sleep -Milliseconds 120
-  if([LiveHenkan.Tests.Driver]::Read($notepad.Field).Trim([char[]]"`r`n").Length -eq 0){return}
+  if([Henkan.Tests.Driver]::Read($notepad.Field).Trim([char[]]"`r`n").Length -eq 0){return}
   Start-Sleep -Milliseconds 200
-  if([LiveHenkan.Tests.Driver]::Read($notepad.Field).Trim([char[]]"`r`n").Length -eq 0){return}
+  if([Henkan.Tests.Driver]::Read($notepad.Field).Trim([char[]]"`r`n").Length -eq 0){return}
  }
 }
 function Close-TestNotepad($notepad){
@@ -141,19 +141,19 @@ function Close-TestNotepad($notepad){
  # for Notepad to bring back the next time it is started.
  try{
   Clear-TestNotepad $notepad
-  [LiveHenkan.Tests.Driver]::OwnKey(0x53,$false,$true);Start-Sleep -Milliseconds 300
-  [LiveHenkan.Tests.Driver]::OwnKey(0x57,$false,$true);Start-Sleep -Milliseconds 500
+  [Henkan.Tests.Driver]::OwnKey(0x53,$false,$true);Start-Sleep -Milliseconds 300
+  [Henkan.Tests.Driver]::OwnKey(0x57,$false,$true);Start-Sleep -Milliseconds 500
  }catch{}
  $process=Get-Process -Id $notepad.Pid -ErrorAction SilentlyContinue
- if($process -and !$process.HasExited){[LiveHenkan.Tests.Driver]::Close($notepad.Hwnd)}
+ if($process -and !$process.HasExited){[Henkan.Tests.Driver]::Close($notepad.Hwnd)}
  Start-Sleep -Milliseconds 600
  $process=Get-Process -Id $notepad.Pid -ErrorAction SilentlyContinue
  if($process -and !$process.HasExited){Stop-Process -Id $notepad.Pid -Force -ErrorAction SilentlyContinue}
 }
 function Save-WindowShot($hwnd,[string]$name){
- $r=[LiveHenkan.Tests.Driver]::Rect($hwnd)
+ $r=[Henkan.Tests.Driver]::Rect($hwnd)
  $path=Join-Path $script:Results $name
- [LiveHenkan.Tests.Driver]::Capture($r[0],$r[1],$r[2]-$r[0],$r[3]-$r[1],$path)
+ [Henkan.Tests.Driver]::Capture($r[0],$r[1],$r[2]-$r[0],$r[3]-$r[1],$path)
  return $path
 }
 
@@ -162,7 +162,12 @@ function Save-WindowShot($hwnd,[string]$name){
 function New-TestApp([string]$Kind,[int]$ProcessId,[long]$Hwnd,[scriptblock]$Read,[scriptblock]$Reset,[scriptblock]$Close,$State){
  return [pscustomobject]@{Kind=$Kind;Pid=$ProcessId;Hwnd=$Hwnd;Read=$Read;Reset=$Reset;Close=$Close;State=$State}
 }
-function Open-TestApp([string]$Kind){
+function Close-TestEdge([long]$Hwnd,[string]$Profile){
+ if($Hwnd){[Henkan.Tests.Driver]::Close($Hwnd);Start-Sleep -Milliseconds 1200}
+ # Only this invocation's unique profile, never other Edge windows/processes.
+ foreach($proc in @(Get-CimInstance Win32_Process -Filter "Name='msedge.exe'"|Where-Object{$_.CommandLine -like ('*'+$Profile+'*')})){Stop-Process -Id $proc.ProcessId -Force -ErrorAction SilentlyContinue}
+}
+function Open-TestApp([string]$Kind,[string]$WebPage='page.html'){
  switch($Kind){
   'notepad'{
    $n=Open-TestNotepad
@@ -176,8 +181,8 @@ function Open-TestApp([string]$Kind){
    if($new.Count -ne 1){throw 'Could not identify our own Word'}
    $doc=$word.Documents.Add();$word.Visible=$true
    $hwnd=[long]$doc.ActiveWindow.Hwnd
-   [LiveHenkan.Tests.Driver]::Move($hwnd,120,120,1000,640)
-   if(![LiveHenkan.Tests.Driver]::Activate($hwnd)){throw 'Could not activate our Word'}
+   [Henkan.Tests.Driver]::Move($hwnd,120,120,1000,640)
+   if(![Henkan.Tests.Driver]::Activate($hwnd)){throw 'Could not activate our Word'}
    Start-Sleep -Milliseconds 800
    return New-TestApp 'word' $new[0].Id $hwnd {param($a) ([string]$a.State.Doc.Content.Text).TrimEnd([char[]]"`r`n")} {param($a) $a.State.Doc.Content.Text='';$a.State.Word.Selection.SetRange(0,0);Start-Sleep -Milliseconds 150} {
     param($a)
@@ -196,50 +201,70 @@ function Open-TestApp([string]$Kind){
    if($new.Count -ne 1){throw 'Could not identify our own Excel'}
    $excel.DisplayAlerts=$false;$book=$excel.Workbooks.Add();$excel.Visible=$true
    $hwnd=[long]$excel.Hwnd
-   [LiveHenkan.Tests.Driver]::Move($hwnd,120,120,1000,640)
-   if(![LiveHenkan.Tests.Driver]::Activate($hwnd)){throw 'Could not activate our Excel'}
-   $excel.ActiveSheet.Range('A1').Select()|Out-Null
+   [Henkan.Tests.Driver]::Move($hwnd,120,120,1000,640)
+   if(![Henkan.Tests.Driver]::Activate($hwnd)){throw 'Could not activate our Excel'}
+   $sheet=$book.Worksheets.Item(1)
+   $sheet.Range('A1').Select()|Out-Null
    Start-Sleep -Milliseconds 800
    # Read: every filled cell of column A joined, so each confirmed entry is seen in order.
-   return New-TestApp 'excel' $new[0].Id $hwnd {param($a) $s='';for($i=1;$i -le 40;$i++){$v=$a.State.Excel.ActiveSheet.Cells.Item($i,1).Value2;if($null -eq $v){break};$s+=[string]$v};$s} {param($a) $a.State.Excel.ActiveSheet.Range('A1:A40').ClearContents()|Out-Null;$a.State.Excel.ActiveSheet.Range('A1').Select()|Out-Null;Start-Sleep -Milliseconds 150} {
+   return New-TestApp 'excel' $new[0].Id $hwnd {param($a)
+    # Retain our worksheet instead of querying the application's transient
+    # ActiveSheet while Excel is completing an edit. COM can be busy briefly.
+    $watch=[Diagnostics.Stopwatch]::StartNew()
+    do{
+     try{
+      $cells=$a.State.Sheet.Range('A1:A40');if($null -eq $cells){throw 'Our worksheet range is temporarily unavailable'}
+      $values=$cells.Value2;$s=''
+      for($i=1;$i -le 40;$i++){$v=$values.GetValue($i,1);if($null -eq $v){break};$s+=[string]$v}
+      return $s
+     }catch{if($watch.ElapsedMilliseconds -ge 3000){throw};Start-Sleep -Milliseconds 100}
+    }while($true)
+   } {param($a) $a.State.Sheet.Range('A1:A40').ClearContents()|Out-Null;$a.State.Sheet.Range('A1').Select()|Out-Null;Start-Sleep -Milliseconds 150} {
     param($a)
     try{$a.State.Book.Close($false)}catch{}
     try{$a.State.Excel.Quit()}catch{}
-    try{[void][Runtime.InteropServices.Marshal]::FinalReleaseComObject($a.State.Book);[void][Runtime.InteropServices.Marshal]::FinalReleaseComObject($a.State.Excel)}catch{}
+    try{[void][Runtime.InteropServices.Marshal]::FinalReleaseComObject($a.State.Sheet);[void][Runtime.InteropServices.Marshal]::FinalReleaseComObject($a.State.Book);[void][Runtime.InteropServices.Marshal]::FinalReleaseComObject($a.State.Excel)}catch{}
     Start-Sleep -Milliseconds 800
     $p=Get-Process -Id $a.Pid -ErrorAction SilentlyContinue;if($p -and !$p.HasExited){Stop-Process -Id $a.Pid -Force -ErrorAction SilentlyContinue}
-   } ([pscustomobject]@{Excel=$excel;Book=$book})
+   } ([pscustomobject]@{Excel=$excel;Book=$book;Sheet=$sheet})
   }
   'edge'{
    $edge=(Get-ItemProperty 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\App Paths\msedge.exe').'(default)'
-   $profile=Join-Path $script:Results 'edge-profile'
+   $profile=Join-Path $script:Results ('edge-profile-'+[guid]::NewGuid().ToString('N'))
    if(@(Get-CimInstance Win32_Process -Filter "Name='msedge.exe'"|Where-Object{$_.CommandLine -like ('*'+$profile+'*')}).Count -gt 0){throw 'The test Edge profile is already in use'}
-   $url=([uri](Join-Path $PSScriptRoot 'page.html')).AbsoluteUri
+   $url=([uri](Join-Path $PSScriptRoot $WebPage)).AbsoluteUri
    $p=Start-Process -FilePath $edge -ArgumentList @(('--user-data-dir="'+$profile+'"'),'--no-first-run','--no-default-browser-check','--disable-background-networking','--disable-sync','--disable-extensions','--new-window',$url) -PassThru
+   try{
    $watch=[Diagnostics.Stopwatch]::StartNew();$hwnd=0
    while($watch.ElapsedMilliseconds -lt 15000 -and $hwnd -eq 0){Start-Sleep -Milliseconds 200;$p.Refresh();$hwnd=$p.MainWindowHandle.ToInt64()}
    if($hwnd -eq 0){throw 'Edge window not found'}
-   [LiveHenkan.Tests.Driver]::Move($hwnd,120,120,1000,700)
-   if(![LiveHenkan.Tests.Driver]::Activate($hwnd)){throw 'Could not activate our Edge'}
    Start-Sleep -Milliseconds 1500
+   $p.Refresh();$hwnd=$p.MainWindowHandle.ToInt64()
+   [Henkan.Tests.Driver]::Move($hwnd,120,120,1000,700)
+   $activated=$false
+   for($attempt=0;$attempt -lt 10;$attempt++){if([Henkan.Tests.Driver]::Activate($hwnd)){$activated=$true;break};Start-Sleep -Milliseconds 150}
+   if(!$activated){
+    $foreground=[Henkan.Native]::GetForegroundWindow()
+    throw ('Could not activate our Edge; foreground HWND='+$foreground.ToInt64()+' PID='+[Henkan.Native]::ProcessOf($foreground)+' class='+[Henkan.Native]::ClassOf($foreground))
+   }
    return New-TestApp 'edge' $p.Id $hwnd {
     param($a)
-    $b=New-Object Text.StringBuilder 4096;[void][LiveHenkan.Native]::GetWindowText([IntPtr]$a.Hwnd,$b,4096);$t=$b.ToString()
+    $b=New-Object Text.StringBuilder 4096;[void][Henkan.Native]::GetWindowText([IntPtr]$a.Hwnd,$b,4096);$t=$b.ToString()
     $i=$t.IndexOf('LH|');$j=$t.LastIndexOf('|END');if($i -lt 0 -or $j -lt 0){return $null}
     $body=$t.Substring($i+3,$j-$i-3);return $body.Substring($body.IndexOf('|')+1)
-   } {param($a) [LiveHenkan.Tests.Driver]::OwnKey(65,$false,$true);[LiveHenkan.Tests.Driver]::OwnKey(8,$false,$false);Start-Sleep -Milliseconds 150} {
+   } {param($a) [Henkan.Tests.Driver]::OwnKey(65,$false,$true);[Henkan.Tests.Driver]::OwnKey(8,$false,$false);Start-Sleep -Milliseconds 150} {
     param($a)
-    $profile=Join-Path $script:Results 'edge-profile'
-    [LiveHenkan.Tests.Driver]::Close($a.Hwnd);Start-Sleep -Milliseconds 1200
-    foreach($proc in @(Get-CimInstance Win32_Process -Filter "Name='msedge.exe'"|Where-Object{$_.CommandLine -like ('*'+$profile+'*')})){Stop-Process -Id $proc.ProcessId -Force -ErrorAction SilentlyContinue}
-   } $null
+    $profile=$a.State.Profile
+    Close-TestEdge $a.Hwnd $profile
+   } ([pscustomobject]@{Profile=$profile})
+   }catch{Close-TestEdge 0 $profile;throw}
   }
   default{throw "Unknown application: $Kind"}
  }
 }
 function Read-TestApp($app){return (& $app.Read $app)}
 function Reset-TestApp($app){
- if([LiveHenkan.Tests.Driver]::Foreground() -ne $app.Hwnd){$null=[LiveHenkan.Tests.Driver]::Activate($app.Hwnd)}
+ if([Henkan.Tests.Driver]::Foreground() -ne $app.Hwnd){$null=[Henkan.Tests.Driver]::Activate($app.Hwnd)}
  & $app.Reset $app
 }
 function Close-TestApp($app){if($app){try{& $app.Close $app}catch{}}}

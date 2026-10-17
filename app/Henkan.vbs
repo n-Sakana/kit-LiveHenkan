@@ -1,4 +1,4 @@
-' Runs LiveHenkan.ps1 without showing a console. Called from the right-click menu.
+' Runs Henkan.ps1 without showing a console. Called from the right-click menu.
 ' This file must stay pure ASCII: wscript.exe reads a .vbs in the system ANSI code page.
 Option Explicit
 Dim fs, sh, appDir, ps, native, cmd, arg
@@ -20,6 +20,6 @@ native = sh.ExpandEnvironmentStrings("%SystemRoot%") & "\Sysnative\WindowsPowerS
 If fs.FileExists(native) Then ps = native
 
 cmd = Chr(34) & ps & Chr(34) & " -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -WindowStyle Hidden -File " _
-    & Chr(34) & appDir & "\LiveHenkan.ps1" & Chr(34) & " -Command " & arg
+    & Chr(34) & appDir & "\Henkan.ps1" & Chr(34) & " -Command " & arg
 sh.CurrentDirectory = appDir
 sh.Run cmd, 0, False

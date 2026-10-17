@@ -3,7 +3,7 @@ using System.IO;
 using System.Text;
 using System.Collections.Generic;
 
-namespace LiveHenkan.Tests {
+namespace Henkan.Tests {
  public static class MixedChecks {
   static readonly List<CheckResult> results=new List<CheckResult>();
   static void Equal(string name,string expected,string actual){results.Add(new CheckResult{Name=name,Ok=expected==actual,Detail="expected ["+expected+"] actual ["+actual+"]"});}

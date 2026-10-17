@@ -2,14 +2,14 @@ param([string]$ModelDir='',[string]$Root='')
 # How the resident behaves around ordinary use: modes, mouse, shortcuts, candidates, a password box, emergency stop.
 # Runs in a small window of the test's own (a classic edit box), through the real keyboard and mouse hooks.
 . (Join-Path $PSScriptRoot 'TestLib.ps1')
-if(!('LiveHenkan.Tests.FormHost' -as [type])){
+if(!('Henkan.Tests.FormHost' -as [type])){
  $temp=Join-Path $script:Repo 'temp';[IO.Directory]::CreateDirectory($temp)|Out-Null;$env:TEMP=$temp;$env:TMP=$temp
- $null=Build-LiveHenkan -App (Join-Path $script:Repo 'app') -Extra @((Join-Path $PSScriptRoot 'Headless.cs'),(Join-Path $PSScriptRoot 'Driver.cs'),(Join-Path $PSScriptRoot 'FormHost.cs'))
- [LiveHenkan.Native]::PrepareProcess()
+ $null=Build-Henkan -App (Join-Path $script:Repo 'app') -Extra @((Join-Path $PSScriptRoot 'Headless.cs'),(Join-Path $PSScriptRoot 'Driver.cs'),(Join-Path $PSScriptRoot 'FormHost.cs'))
+ [Henkan.Native]::PrepareProcess()
 }
 if(!$Root){$Root=$script:Repo}
 $modelDir=if(Test-Path -LiteralPath (Join-Path $Root 'xsmall.jinen')){''}else{Get-TestModelDir $ModelDir}
-$D=[LiveHenkan.Tests.Driver]
+$D=[Henkan.Tests.Driver]
 $userDir=Join-Path $script:Results 'behavior-user'
 if(Test-Path -LiteralPath $userDir){Remove-Item -LiteralPath $userDir -Recurse -Force}
 $checks=New-Object System.Collections.Generic.List[object]
@@ -29,7 +29,7 @@ function Fresh{$null=Send-Resident 'reset';$form.Clear();$form.FocusPlain();if($
 $resident=$null;$form=$null
 try{
  $resident=Start-Resident -Root $Root -ModelDir $modelDir -UserDir $userDir
- $form=New-Object LiveHenkan.Tests.FormHost
+ $form=New-Object Henkan.Tests.FormHost
  $null=$D::Activate($form.Hwnd);$form.FocusPlain();Start-Sleep -Milliseconds 400
 
  Fresh
@@ -85,9 +85,9 @@ try{
 
  Fresh
  $D::Type('kaigi',60);$held=Converted
- [LiveHenkan.Native]::SendKeyDown(0xA4,[LiveHenkan.Native]::TestMark);Start-Sleep -Milliseconds 120
+ [Henkan.Native]::SendKeyDown(0xA4,[Henkan.Native]::TestMark);Start-Sleep -Milliseconds 120
  $duringAlt=$form.Plain
- [LiveHenkan.Native]::SendKeyUp(0xA4,[LiveHenkan.Native]::TestMark);Start-Sleep -Milliseconds 150
+ [Henkan.Native]::SendKeyUp(0xA4,[Henkan.Native]::TestMark);Start-Sleep -Milliseconds 150
  $D::Key(27);Start-Sleep -Milliseconds 200
  $D::Key(0x1D);Start-Sleep -Milliseconds 150;$D::Type('x',40);Start-Sleep -Milliseconds 200;$D::Key(0x1C);Start-Sleep -Milliseconds 150
  Check 'pressing Alt commits the text first and Alt is not left held' ($duringAlt -ceq $held -and $form.Plain -ceq ($held+'x')) "$duringAlt / $($form.Plain)"

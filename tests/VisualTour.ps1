@@ -4,7 +4,7 @@ param([ValidateSet('notepad','word','excel','edge')][string]$Kind='notepad',[str
 Initialize-Tests
 if(!$Root){$Root=$script:Repo}
 $modelDir=if(Test-Path -LiteralPath (Join-Path $Root 'xsmall.jinen')){''}else{Get-TestModelDir $ModelDir}
-$D=[LiveHenkan.Tests.Driver]
+$D=[Henkan.Tests.Driver]
 $resident=$null;$target=$null;$step=0
 $script:region=$null
 function Shot([string]$label){

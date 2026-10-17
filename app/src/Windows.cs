@@ -13,7 +13,7 @@ using System.Windows.Media;
 using System.Windows.Media.Animation;
 using System.Windows.Threading;
 
-namespace LiveHenkan {
+namespace Henkan {
  public static class SettingsStore {
   // One "name=value" per line; unknown names are ignored so older and newer versions can share a file.
   public static void Load(string path,Settings s){
@@ -250,7 +250,7 @@ namespace LiveHenkan {
    try{int n=dict.Import(d.FileName);Refresh();Say(n+" 語を読み込みました",false);}catch(Exception ex){Say("読み込めませんでした: "+ex.Message,true);}
   }
   void Export(){
-   Microsoft.Win32.SaveFileDialog d=new Microsoft.Win32.SaveFileDialog{Filter="テキスト (*.txt)|*.txt",FileName="LiveHenkan-words.txt",Title="単語の一覧を書き出す"};
+   Microsoft.Win32.SaveFileDialog d=new Microsoft.Win32.SaveFileDialog{Filter="テキスト (*.txt)|*.txt",FileName="Henkan-words.txt",Title="単語の一覧を書き出す"};
    if(d.ShowDialog(this)!=true)return;
    try{dict.Export(d.FileName);Say("書き出しました",false);}catch(Exception ex){Say("書き出せませんでした: "+ex.Message,true);}
   }
@@ -278,7 +278,7 @@ namespace LiveHenkan {
 
  sealed class SettingsWindow : PanelWindow {
   readonly Settings settings; readonly UserDictionary dict; readonly Action changed; readonly TextBlock learned=new TextBlock();
-  public SettingsWindow(Settings s,UserDictionary dictionary,Action onChanged,string footer):base("LiveHenkanの設定",440){
+  public SettingsWindow(Settings s,UserDictionary dictionary,Action onChanged,string footer):base("Henkanの設定",440){
    settings=s;dict=dictionary;changed=onChanged;
    Toggle("半角/全角キーで かな と 英数 を切り替える","ToggleWithHankaku");
    Toggle("Ctrl + Shift + Space で切り替える","ToggleWithCtrlShiftSpace");
@@ -287,6 +287,7 @@ namespace LiveHenkan {
    Toggle("何も打っていないときの Space を全角にする","FullWidthSpace");
    Toggle("記号を全角で入力する","FullWidthSymbols");
    Toggle("数字を全角で入力する","FullWidthDigits");
+   Toggle("日付・時刻・単位付きの数字を整える","FormatNumbers");
    Toggle("句読点を「，．」にする","WesternPunctuation");
    Toggle("文末のあと、次の文を打ち始めたら確定する","CommitAtSentenceEnd");
    Toggle("変換中の文字を文書の中に出す（メモ帳など）","WriteIntoDocument");

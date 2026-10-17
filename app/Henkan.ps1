@@ -20,8 +20,9 @@ try{
  # The compiler's scratch files stay inside this folder when it is writable.
  $temp=Join-Path $root 'temp'
  try{[IO.Directory]::CreateDirectory($temp)|Out-Null;$env:TEMP=$temp;$env:TMP=$temp}catch{}
- $null=Build-LiveHenkan -App $app
- $code=[LiveHenkan.App]::Run([string]$root,[string]$model,[string]$Command,[bool]$Test,[string]$UserDir)
+ $null=Build-Henkan -App $app
+ $code=[Henkan.App]::Run([string]$root,[string]$model,[string]$Command,[bool]$Test,[string]$UserDir)
+ if($code -eq 2){throw (Get-Strings)['start.running']}
  exit [int]$code
 }catch{
  $detail=($_|Out-String)

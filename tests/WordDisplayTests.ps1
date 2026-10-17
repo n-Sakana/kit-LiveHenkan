@@ -1,7 +1,7 @@
 param([string]$ModelDir,[string]$Root=(Split-Path -Parent $PSScriptRoot),[string]$Label='current')
 . (Join-Path $PSScriptRoot 'TestLib.ps1')
 Initialize-Tests
-$D=[LiveHenkan.Tests.Driver];$resident=$null;$app=$null;$rows=@()
+$D=[Henkan.Tests.Driver];$resident=$null;$app=$null;$rows=@()
 function InkBox($path,$x,$y,$width,$height){
  $bitmap=[Drawing.Bitmap]::new($path);$top=[int]::MaxValue;$bottom=-1
  try{for($row=$y;$row -lt $y+$height;$row++){for($col=$x;$col -lt $x+$width;$col++){$c=$bitmap.GetPixel($col,$row);if($c.R -lt 90 -and $c.G -lt 90 -and $c.B -lt 90){$top=[math]::Min($top,$row);$bottom=[math]::Max($bottom,$row)}}}}finally{$bitmap.Dispose()}

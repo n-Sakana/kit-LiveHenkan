@@ -4,7 +4,7 @@ using System.IO;
 using System.Text;
 using System.Collections.Generic;
 
-namespace LiveHenkan.Tests {
+namespace Henkan.Tests {
  public sealed class CheckResult { public string Name,Detail; public bool Ok; }
  public static class CoreChecks {
   static List<CheckResult> results; static Headless h; static string modelPath,tablePath,userRoot; static int threads,userSeq;
@@ -122,8 +122,9 @@ namespace LiveHenkan.Tests {
    Equal("long input loses nothing","今日は会議があるので、資料を準備してから営業部の人と打ち合わせをして、その後で報告書を書く予定です",Doc);
 
    Fresh();
+   h.Settings.FormatNumbers=false;
    Type("dai3kainokaigiha10gatsu5nichidesu");Enter();
-   Equal("digits stay as typed","第3回の会議は10月5日です",Doc);
+   Equal("formatting off keeps dates as typed","第3回の会議は10月5日です",Doc);
 
    Fresh();
    Type("denwaha03-1234-5678desu");Enter();

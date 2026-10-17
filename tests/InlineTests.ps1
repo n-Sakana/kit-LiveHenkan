@@ -3,14 +3,14 @@ param([string]$ModelDir='',[string]$Root='')
 # document is never left holding anything the user did not confirm. Runs in a Notepad and a small window of the
 # test's own, through the real keyboard and mouse hooks.
 . (Join-Path $PSScriptRoot 'TestLib.ps1')
-if(!('LiveHenkan.Tests.FormHost' -as [type])){
+if(!('Henkan.Tests.FormHost' -as [type])){
  $temp=Join-Path $script:Repo 'temp';[IO.Directory]::CreateDirectory($temp)|Out-Null;$env:TEMP=$temp;$env:TMP=$temp
- $null=Build-LiveHenkan -App (Join-Path $script:Repo 'app') -Extra @((Join-Path $PSScriptRoot 'Headless.cs'),(Join-Path $PSScriptRoot 'Driver.cs'),(Join-Path $PSScriptRoot 'FormHost.cs'))
- [LiveHenkan.Native]::PrepareProcess()
+ $null=Build-Henkan -App (Join-Path $script:Repo 'app') -Extra @((Join-Path $PSScriptRoot 'Headless.cs'),(Join-Path $PSScriptRoot 'Driver.cs'),(Join-Path $PSScriptRoot 'FormHost.cs'))
+ [Henkan.Native]::PrepareProcess()
 }
 if(!$Root){$Root=$script:Repo}
 $modelDir=if(Test-Path -LiteralPath (Join-Path $Root 'xsmall.jinen')){''}else{Get-TestModelDir $ModelDir}
-$D=[LiveHenkan.Tests.Driver]
+$D=[Henkan.Tests.Driver]
 $userDir=Join-Path $script:Results 'inline-user'
 if(Test-Path -LiteralPath $userDir){Remove-Item -LiteralPath $userDir -Recurse -Force}
 $shots=Join-Path $script:Results 'inline';[IO.Directory]::CreateDirectory($shots)|Out-Null
@@ -29,7 +29,7 @@ function Converted([int]$timeoutMs=3000){
 }
 function Doc{Read-TestNotepadLines $notepad}
 function Own([int]$vk,[bool]$shift=$false,[bool]$ctrl=$false){$D::OwnKey($vk,$shift,$ctrl);Start-Sleep -Milliseconds 70}
-function Put([string]$text){[LiveHenkan.Native]::SendText($text,[LiveHenkan.Native]::OwnMark);Start-Sleep -Milliseconds (150+12*$text.Length)}
+function Put([string]$text){[Henkan.Native]::SendText($text,[Henkan.Native]::OwnMark);Start-Sleep -Milliseconds (150+12*$text.Length)}
 # Our Notepad in front, holding these lines, the caret behind the last one.
 function Fresh([string[]]$lines){
  $null=Send-Resident 'reset'
@@ -52,7 +52,7 @@ $maru=[string][char]0x3002
 $resident=$null;$notepad=$null;$form=$null;$sent=0;$seen=0;$writes=$null
 try{
  $resident=Start-Resident -Root $Root -ModelDir $modelDir -UserDir $userDir
- $form=New-Object LiveHenkan.Tests.FormHost(1060,140)
+ $form=New-Object Henkan.Tests.FormHost(1060,140)
  $notepad=Open-TestNotepad
 
  # ---- what is seen while typing
@@ -298,7 +298,7 @@ try{
 }catch{Check 'unexpected error' $false ($_|Out-String)}
 finally{
  # Each step on its own: whatever went wrong above, nothing of the test stays open.
- try{$null=[LiveHenkan.Tests.Driver]::StopWatch()}catch{}
+ try{$null=[Henkan.Tests.Driver]::StopWatch()}catch{}
  try{Close-TestNotepad $notepad}catch{}
  try{if($form){$form.Dispose()}}catch{}
  "resident: "+(Stop-Resident $resident)

@@ -1,5 +1,7 @@
 # Registration of the right-click menu, shared by install and uninstall. ASCII only.
-$script:MenuKey='LiveHenkan'
+$script:MenuKey='Henkan'
+# Compatibility: retire the previous menu, never its folder or user files.
+$script:PreviousMenuKey='LiveHenkan'
 $script:MenuContexts=@('Software\Classes\DesktopBackground\Shell','Software\Classes\Directory\Background\shell')
 $script:MenuItems=@(
  @{Id='01on';Label='menu.on';Command='on'},
@@ -8,7 +10,7 @@ $script:MenuItems=@(
  @{Id='04settings';Label='menu.settings';Command='settings'}
 )
 
-function Get-LiveHenkanMenuKeys {
+function Get-HenkanMenuKeys {
  $found=@()
  foreach($context in $script:MenuContexts){
   $key=[Microsoft.Win32.Registry]::CurrentUser.OpenSubKey($context+'\'+$script:MenuKey)
@@ -17,7 +19,7 @@ function Get-LiveHenkanMenuKeys {
  return $found
 }
 
-function Unregister-LiveHenkanMenu {
+function Unregister-HenkanMenu {
  foreach($context in $script:MenuContexts){
   $parent=[Microsoft.Win32.Registry]::CurrentUser.OpenSubKey($context,$true)
   if($parent){
@@ -26,13 +28,13 @@ function Unregister-LiveHenkanMenu {
  }
 }
 
-function Register-LiveHenkanMenu([string]$App,[hashtable]$Strings){
+function Register-HenkanMenu([string]$App,[hashtable]$Strings){
  # Every row in this submenu counts toward the Explorer limit.
  if($script:MenuItems.Count -gt 16){throw 'A submenu may contain at most 16 rows'}
- $launcher=Join-Path $App 'LiveHenkan.vbs'
- if(!(Test-Path -LiteralPath $launcher -PathType Leaf)){throw "LiveHenkan.vbs not found: $launcher"}
+ $launcher=Join-Path $App 'Henkan.vbs'
+ if(!(Test-Path -LiteralPath $launcher -PathType Leaf)){throw "Henkan.vbs not found: $launcher"}
  $wscript=Join-Path $env:SystemRoot 'System32\wscript.exe'
- Unregister-LiveHenkanMenu
+ Unregister-HenkanMenu
  foreach($context in $script:MenuContexts){
   $key=[Microsoft.Win32.Registry]::CurrentUser.CreateSubKey($context+'\'+$script:MenuKey)
   try{
@@ -47,5 +49,9 @@ function Register-LiveHenkanMenu([string]$App,[hashtable]$Strings){
     }finally{$entry.Dispose()}
    }
   }finally{$key.Dispose()}
+ }
+ foreach($context in $script:MenuContexts){
+  $parent=[Microsoft.Win32.Registry]::CurrentUser.OpenSubKey($context,$true)
+  if($parent){try{$parent.DeleteSubKeyTree($script:PreviousMenuKey,$false)}finally{$parent.Dispose()}}
  }
 }

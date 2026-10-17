@@ -5,7 +5,7 @@ using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Xml;
 
-namespace LiveHenkan {
+namespace Henkan {
  static class OfficeStyle {
   static object Get(object value,string property){return value.GetType().InvokeMember(property,BindingFlags.GetProperty,null,value,null);}
   static void Release(object value){if(value!=null&&Marshal.IsComObject(value))Marshal.ReleaseComObject(value);}

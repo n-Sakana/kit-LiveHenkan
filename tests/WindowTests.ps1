@@ -4,7 +4,7 @@ param([string]$ModelDir='',[string]$Root='')
 Initialize-Tests
 if(!$Root){$Root=$script:Repo}
 $modelDir=if(Test-Path -LiteralPath (Join-Path $Root 'xsmall.jinen')){''}else{Get-TestModelDir $ModelDir}
-$D=[LiveHenkan.Tests.Driver]
+$D=[Henkan.Tests.Driver]
 $userDir=Join-Path $script:Results 'window-user'
 if(Test-Path -LiteralPath $userDir){Remove-Item -LiteralPath $userDir -Recurse -Force}
 $checks=New-Object System.Collections.Generic.List[object]
@@ -17,7 +17,7 @@ function Wait-Panel([int]$processId,[bool]$present){
 function Shot($hwnd,[string]$name){
  Start-Sleep -Milliseconds 400
  # The window has a see-through margin for its shadow; that margin is left out so nothing behind it gets into the picture.
- $r=$D::Rect($hwnd);$inset=[int][math]::Ceiling(19*[LiveHenkan.Native]::ScaleAt($r[0]+40,$r[1]+40))+1
+ $r=$D::Rect($hwnd);$inset=[int][math]::Ceiling(19*[Henkan.Native]::ScaleAt($r[0]+40,$r[1]+40))+1
  $D::Capture($r[0]+$inset,$r[1]+$inset,$r[2]-$r[0]-2*$inset,$r[3]-$r[1]-2*$inset,(Join-Path $script:Results "windows\$name.png"))
 }
 $resident=$null
@@ -29,6 +29,8 @@ try{
  Check 'word window opens' ($panel -ne 0) ($D::Title($panel))
  Start-Sleep -Milliseconds 600
  Check 'word window is in front' ($D::Foreground() -eq $panel)
+ if(!$panel -or $D::Foreground() -ne $panel){throw 'Our word window is not in front; input stopped'}
+ $D::TargetWindow=$panel
  Shot $panel 'words-1-empty'
  # reading box: kana must arrive as kana
  $D::Type('himawari',70);Start-Sleep -Milliseconds 400
@@ -66,6 +68,9 @@ try{
  $null=Send-Resident 'settings'
  $panel=Wait-Panel $processId $true
  Check 'settings window opens' ($panel -ne 0) ($D::Title($panel))
+ if(!$panel -or $D::Foreground() -ne $panel){throw 'Our settings window is not in front; input stopped'}
+ $D::TargetWindow=$panel
+ Check 'settings title uses the new product name' ($D::Title($panel) -like '*Henkan*') ($D::Title($panel))
  Shot $panel 'settings-1'
  # toggle the first switch by clicking its row, then put it back
  $r=$D::Rect($panel)
@@ -77,6 +82,18 @@ try{
  $D::Click($r[0]+120,$r[1]+18+46+24);Start-Sleep -Milliseconds 300
  $saved=[IO.File]::ReadAllText((Join-Path $userDir 'settings.txt'))
  Check 'and saved again when put back' ($saved -match 'ToggleWithHankaku=1')
+ # The seventh switch is numeric formatting. Read its actual screen bounds
+ # rather than assuming the same DPI or row position as the first switch.
+ $element=[Windows.Automation.AutomationElement]::FromHandle([IntPtr]$panel)
+ $switches=$element.FindAll([Windows.Automation.TreeScope]::Descendants,[Windows.Automation.PropertyCondition]::new([Windows.Automation.AutomationElement]::ControlTypeProperty,[Windows.Automation.ControlType]::CheckBox))
+ if($switches.Count -ne 11){throw 'Unexpected settings switches; refusing to click'}
+ $bounds=$switches[6].Current.BoundingRectangle
+ $D::Click([int]($bounds.Left+$bounds.Width/2),[int]($bounds.Top+$bounds.Height/2));Start-Sleep -Milliseconds 300
+ $saved=[IO.File]::ReadAllText((Join-Path $userDir 'settings.txt'))
+ Check 'numeric formatting can be disabled and saved' ($saved -match 'FormatNumbers=0')
+ $D::Click([int]($bounds.Left+$bounds.Width/2),[int]($bounds.Top+$bounds.Height/2));Start-Sleep -Milliseconds 300
+ $saved=[IO.File]::ReadAllText((Join-Path $userDir 'settings.txt'))
+ Check 'numeric formatting can be enabled and saved' ($saved -match 'FormatNumbers=1')
  $D::Key(27);$gone=Wait-Panel $processId $false
  Check 'escape closes the settings window' ($gone -eq 0)
  $state=Get-ResidentState

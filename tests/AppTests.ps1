@@ -4,7 +4,7 @@ param([ValidateSet('notepad','word','excel','edge')][string]$Kind='notepad',[int
 Initialize-Tests
 if(!$Root){$Root=$script:Repo}
 $modelDir=if(Test-Path -LiteralPath (Join-Path $Root 'xsmall.jinen')){''}else{Get-TestModelDir $ModelDir}
-$D=[LiveHenkan.Tests.Driver]
+$D=[Henkan.Tests.Driver]
 $all=Get-Content -LiteralPath (Join-Path $script:Repo 'corpus.json') -Raw -Encoding UTF8|ConvertFrom-Json
 $corpus=@($all|Select-Object -First $Count)
 $resident=$null;$target=$null;$rows=@();$failure='';$metrics=$null;$final=$null
@@ -22,6 +22,7 @@ function Wait-Converted([int]$timeoutMs=4000){
 try{
  $resident=Start-Resident -Root $Root -ModelDir $modelDir
  $target=Open-TestApp $Kind
+ $D::TargetWindow=$target.Hwnd
  foreach($r in $corpus){
   $null=Send-Resident 'reset'
   Reset-TestApp $target
@@ -40,7 +41,7 @@ try{
    # The first Enter put the text into the cell editor; the second one confirms the cell.
    Start-Sleep -Milliseconds 300;$D::Key(13)
    $watch=[Diagnostics.Stopwatch]::StartNew()
-   while($watch.ElapsedMilliseconds -lt 3000 -and [LiveHenkan.Native]::ClassOf([LiveHenkan.Native]::FocusWindow()) -ne 'EXCEL7'){Start-Sleep -Milliseconds 50}
+   while($watch.ElapsedMilliseconds -lt 3000 -and [Henkan.Native]::ClassOf([Henkan.Native]::FocusWindow()) -ne 'EXCEL7'){Start-Sleep -Milliseconds 50}
   }
   Start-Sleep -Milliseconds 250
   $actual=Read-TestApp $target
@@ -55,7 +56,7 @@ try{
  # What was on the screen when it went wrong: the window in front, and a picture of our own window only.
  try{
   $front=$D::Foreground()
-  $failure+=" | in front: ["+$D::Title($front)+"] class "+[LiveHenkan.Native]::ClassOf([IntPtr]$front)+", focus class "+[LiveHenkan.Native]::ClassOf([LiveHenkan.Native]::FocusWindow())
+  $failure+=" | in front: ["+$D::Title($front)+"] class "+[Henkan.Native]::ClassOf([IntPtr]$front)+", focus class "+[Henkan.Native]::ClassOf([Henkan.Native]::FocusWindow())
   $failure+=" | resident: "+(Send-Resident 'state' 500)
   "FAILED (more): $failure"
   if($target){$null=Save-WindowShot $target.Hwnd "appsailure-$Kind.png"}

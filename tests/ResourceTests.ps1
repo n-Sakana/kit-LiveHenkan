@@ -1,9 +1,9 @@
 param([string]$Root=(Split-Path -Parent $PSScriptRoot),[string]$ModelDir,[string]$Label='current')
 # No windows or resident: compare identical paced input, including the pauses between words.
 . (Join-Path $PSScriptRoot 'TestLib.ps1')
-$null=Build-LiveHenkan -App (Join-Path $Root 'app') -Extra @((Join-Path $PSScriptRoot 'Headless.cs'))
+$null=Build-Henkan -App (Join-Path $Root 'app') -Extra @((Join-Path $PSScriptRoot 'Headless.cs'))
 $model=Resolve-Model -Root $Root -ModelDir $ModelDir
-$h=New-Object LiveHenkan.Tests.Headless($model,(Join-Path $Root 'app/romaji.tsv'),3,(Join-Path $script:Results ('resource-user-'+$Label)))
+$h=New-Object Henkan.Tests.Headless($model,(Join-Path $Root 'app/romaji.tsv'),3,(Join-Path $script:Results ('resource-user-'+$Label)))
 $proc=[Diagnostics.Process]::GetCurrentProcess()
 try {
  $h.Type('junbi',70);$h.Wait(1000);$null=$h.Key(13,$false);$h.Wait(1000)

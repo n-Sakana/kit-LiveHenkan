@@ -1,0 +1,16 @@
+FullWidthSpace=1
+FullWidthSymbols=1
+FullWidthDigits=0
+WesternPunctuation=0
+CommitAtSentenceEnd=1
+WriteIntoDocument=1
+Learn=0
+ToggleWithHankaku=1
+ToggleWithCtrlShiftSpace=0
+StartInKana=1
+LiveChars=28
+KeepChars=16
+HoldChars=24
+AwaitMs=450
+Threads=2
+HoldMemory=1

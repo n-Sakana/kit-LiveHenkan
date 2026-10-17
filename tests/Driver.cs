@@ -9,7 +9,7 @@ using System.Drawing.Imaging;
 using System.Runtime.InteropServices;
 using System.Windows.Automation;
 
-namespace LiveHenkan.Tests {
+namespace Henkan.Tests {
  public static class Driver {
   [DllImport("user32.dll")]static extern bool SetForegroundWindow(IntPtr h);
   [DllImport("user32.dll")]static extern bool BringWindowToTop(IntPtr h);
@@ -40,6 +40,7 @@ namespace LiveHenkan.Tests {
   }
   public static string Title(long hwnd){StringBuilder b=new StringBuilder(256);Native.GetWindowText(new IntPtr(hwnd),b,256);return b.ToString();}
   public static void Click(int x,int y){
+   EnsureTarget();
    SetCursorPos(x,y);Thread.Sleep(60);
    Native.SendMouseDown(0x2,0,Native.TestMark);Thread.Sleep(40);Native.SendMouseDown(0x4,0,Native.TestMark);
   }

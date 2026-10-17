@@ -11,7 +11,7 @@ function Get-Strings {
 function Send-Resident([string]$text,[int]$timeoutMs=400){
  $pipe=$null
  try{
-  $pipe=New-Object System.IO.Pipes.NamedPipeClientStream('.',('LiveHenkan.'+[Environment]::UserName),[System.IO.Pipes.PipeDirection]::InOut)
+  $pipe=New-Object System.IO.Pipes.NamedPipeClientStream('.',('Henkan.'+[Environment]::UserName),[System.IO.Pipes.PipeDirection]::InOut)
   $pipe.Connect($timeoutMs)
   $writer=New-Object System.IO.StreamWriter($pipe,(New-Object System.Text.UTF8Encoding($false)))
   $writer.WriteLine($text);$writer.Flush()
@@ -33,7 +33,7 @@ function Resolve-Model([string]$Root,[string]$ModelDir='',[string]$Model='xsmall
 }
 
 # Compiles app\src\*.cs in memory with the compiler that ships with .NET Framework. Extra sources are for tests.
-function Build-LiveHenkan([string]$App,[string[]]$Extra=@()){
+function Build-Henkan([string]$App,[string[]]$Extra=@()){
  $fw=[Runtime.InteropServices.RuntimeEnvironment]::GetRuntimeDirectory()
  $wpf=Join-Path $fw 'WPF'
  $cp=New-Object System.CodeDom.Compiler.CompilerParameters

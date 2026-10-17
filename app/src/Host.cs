@@ -12,7 +12,7 @@ using System.Windows.Automation;
 using System.Windows.Automation.Text;
 using WinForms=System.Windows.Forms;
 
-namespace LiveHenkan {
+namespace Henkan {
  public enum InputMode { Alnum, Kana }
 
  // Finds the caret off the hook thread: accessibility calls into another process can be slow.
@@ -98,14 +98,18 @@ namespace LiveHenkan {
      style=RangeStyle(selection);
     }
    }catch{}
-   style=OfficeStyle.Find(focus,style);
+   bool web=IsWeb(element,focus);
+   // An Office web pane can expose a Chromium focused element while its host
+   // still reports the document HWND. Never replace the web font with the sheet's.
+   if(!web)style=OfficeStyle.Find(focus,style);
+   if(style!=null)style.Web=web;
    CaretInfo native;IntPtr actual;
    if(Native.SystemCaret(out native,out actual)&&actual==focus&&
       Native.CaretBelongsToFocus(native.Window,focus)&&CaretGeometry.InBounds(native,bounds)){caret=native;return;}
    if(Native.AccessibleCaret(focus,out native)&&CaretGeometry.InBounds(native,bounds)){caret=native;return;}
    StyleInfo caretStyle;
-   if(LiveHenkan.AutomationCaret.Find(focus,out caret,out caretStyle)&&CaretGeometry.InBounds(caret,bounds)){
-    if(caretStyle!=null)style=caretStyle;return;
+   if(Henkan.AutomationCaret.Find(focus,out caret,out caretStyle)&&CaretGeometry.InBounds(caret,bounds)){
+    if(caretStyle!=null){style=caretStyle;style.Web=web;}return;
    }
    if(selection!=null&&AutomationCaret(selection,focus,out caret)&&CaretGeometry.InBounds(caret,bounds))return;
    // Never ask the Office host for a caret when a child editor has focus.
@@ -116,6 +120,10 @@ namespace LiveHenkan {
    object pattern;if(!element.TryGetCurrentPattern(TextPattern.Pattern,out pattern))return null;
    TextPatternRange[] sel=((TextPattern)pattern).GetSelection();
    return sel==null||sel.Length==0?null:sel[0];
+  }
+  static bool IsWeb(AutomationElement element,IntPtr window){
+   try{if(element!=null&&element.Current.FrameworkId=="Chrome")return true;}catch{}
+   return Native.ClassOf(window).StartsWith("Chrome_",StringComparison.Ordinal);
   }
   static bool AutomationCaret(TextPatternRange sel,IntPtr window,out CaretInfo caret){
    caret=new CaretInfo();
@@ -148,7 +156,7 @@ namespace LiveHenkan {
    try{
     AutomationElement fe;TextPatternRange sel=Selection(out fe);if(sel==null)return null;
     window=new IntPtr(fe.Current.NativeWindowHandle);
-    return RangeStyle(sel);
+    StyleInfo style=RangeStyle(sel);if(style!=null)style.Web=IsWeb(fe,Native.FocusWindow());return style;
    }catch{return null;}
   }
   static StyleInfo RangeStyle(TextPatternRange sel){
@@ -159,15 +167,18 @@ namespace LiveHenkan {
     style.Ink=Rgb(sel.GetAttributeValue(TextPattern.ForegroundColorAttribute));
     style.Back=Rgb(sel.GetAttributeValue(TextPattern.BackgroundColorAttribute));
     object weight=sel.GetAttributeValue(TextPattern.FontWeightAttribute);
-    style.Bold=weight is int&&(int)weight>=600;
+    style.ReadWeight(weight);
+    try{object italic=sel.GetAttributeValue(TextPattern.IsItalicAttribute);style.Italic=italic is bool&&(bool)italic;}catch{}
     return style;
    }catch{return null;}
   }
  }
 
  public sealed class App : IHost {
-  const string MutexName="Local\\LiveHenkan.Resident";
-  public static string PipeName{get{return "LiveHenkan."+Environment.UserName;}}
+  const string MutexName="Local\\Henkan.Resident";
+  // Compatibility: both releases must exclude each other's keyboard hook.
+  const string PreviousMutexName="Local\\LiveHenkan.Resident";
+  public static string PipeName{get{return "Henkan."+Environment.UserName;}}
   readonly string root,userDir; readonly bool testMode; readonly Settings settings=new Settings();
   Jinen.Engine engine; Converter converter; Composer composer; Ui ui; Probe probe; UserDictionary dictionary; InlineWriter inline;
   // A composition is shown either in the document itself (inline) or in the window laid over the caret.
@@ -201,7 +212,14 @@ namespace LiveHenkan {
    bool created;
    using(Mutex single=new Mutex(true,MutexName,out created)){
     if(!created)return 2;
-    try{return new App(root,test,userFolder).Main(modelPath,command);}
+    try{
+     bool previousCreated;
+     using(Mutex previous=new Mutex(true,PreviousMutexName,out previousCreated)){
+      if(!previousCreated)return 2;
+      try{return new App(root,test,userFolder).Main(modelPath,command);}
+      finally{previous.ReleaseMutex();}
+     }
+    }
     finally{single.ReleaseMutex();}
    }
   }
@@ -469,7 +487,7 @@ namespace LiveHenkan {
    if(announce&&Native.ProcessOf(Native.GetForegroundWindow())!=ownPid){
     CaretInfo c;IntPtr f;
     if(!Native.SystemCaret(out c,out f))c=new CaretInfo();
-    ui.Flash(m==InputMode.Kana?"あ  LiveHenkan":"A  英数",c,900);
+    ui.Flash(m==InputMode.Kana?"あ  Henkan":"A  英数",c,900);
    }
   }
   // An emergency stop puts the document back as it was before the unfinished text; an ordinary stop keeps the text as typed.
@@ -481,7 +499,7 @@ namespace LiveHenkan {
    try{inline.Flush(800);}catch{}
    RemoveHooks();
    ui.CloseWindows();
-   ui.Flash("LiveHenkan  オフ",new CaretInfo(),700);
+   ui.Flash("Henkan  オフ",new CaretInfo(),700);
    WinForms.Timer bye=new WinForms.Timer();bye.Interval=750;bye.Tick+=delegate{bye.Stop();WinForms.Application.ExitThread();};bye.Start();
   }
   bool started;
@@ -496,7 +514,7 @@ namespace LiveHenkan {
    invoker.BeginInvoke((Action)delegate{
     Guard(delegate{
      switch(command){
-      case "on": SetMode(settings.StartInKana?InputMode.Kana:InputMode.Alnum,false);ui.Flash(settings.StartInKana?"LiveHenkan  オン":"LiveHenkan  オン（英数）",new CaretInfo(),1300);break;
+      case "on": SetMode(settings.StartInKana?InputMode.Kana:InputMode.Alnum,false);ui.Flash(settings.StartInKana?"Henkan  オン":"Henkan  オン（英数）",new CaretInfo(),1300);break;
       case "kana": SetMode(InputMode.Kana,true);break;
       case "word": if(!started){SetMode(settings.StartInKana?InputMode.Kana:InputMode.Alnum,false);}OpenWords();break;
       case "settings": if(!started){SetMode(settings.StartInKana?InputMode.Kana:InputMode.Alnum,false);}OpenSettings();break;
@@ -535,10 +553,10 @@ namespace LiveHenkan {
    }
   }
   void CreateTray(){
-   tray=new WinForms.NotifyIcon();tray.Text="LiveHenkan";
+   tray=new WinForms.NotifyIcon();tray.Text="Henkan";
    WinForms.ContextMenuStrip menu=new WinForms.ContextMenuStrip();
    menu.Renderer=new MenuRenderer();menu.Font=new System.Drawing.Font("Yu Gothic UI",10f);menu.ShowImageMargin=false;menu.ShowCheckMargin=true;
-   menu.Items.Add("かな（LiveHenkan）",null,delegate{SetMode(InputMode.Kana,true);});
+   menu.Items.Add("かな（Henkan）",null,delegate{SetMode(InputMode.Kana,true);});
    menu.Items.Add("英数",null,delegate{SetMode(InputMode.Alnum,true);});
    menu.Items.Add(new WinForms.ToolStripSeparator());
    menu.Items.Add("単語を登録…",null,delegate{OpenWords();});
@@ -570,7 +588,7 @@ namespace LiveHenkan {
     if(trayIcon!=IntPtr.Zero)Native.DestroyIcon(trayIcon);
     trayIcon=icon;
    }
-   tray.Text=kana?"LiveHenkan: かな":"LiveHenkan: 英数";
+   tray.Text=kana?"Henkan: かな":"Henkan: 英数";
   }
 
   // ---- IHost -----------------------------------------------------------

@@ -1,0 +1,22 @@
+<!doctype html><html lang="ja"><meta charset="utf-8"><title>LH||END</title>
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'">
+<style>
+body{background:#ddd;margin:24px;font:14px 'Segoe UI',sans-serif}
+.editor{font-family:'Segoe UI',sans-serif;font-size:16px;line-height:24px;white-space:pre-wrap;border:1px solid #888;border-radius:16px;padding:12px;min-height:40px;margin:10px 0;background:#fff;color:#242424}
+.dark{background:#292929;color:#f5f5f5}.medium{font-weight:500}.semibold{font-weight:600}
+.yu{font-family:'Yu Gothic UI';font-size:20px}.meiryo{font-family:Meiryo;font-size:18px}
+.narrow{width:320px}
+</style>
+<p>Offline chat editor typography test. Nothing is submitted or saved.</p>
+<div id="dark" class="editor dark" contenteditable="true" role="textbox" spellcheck="false">使い勝手 </div>
+<div id="light" class="editor" contenteditable="true" role="textbox" spellcheck="false">使い勝手 </div>
+<div id="medium" class="editor medium" contenteditable="true" role="textbox" spellcheck="false">使い勝手 </div>
+<div id="semibold" class="editor semibold dark" contenteditable="true" role="textbox" spellcheck="false">使い勝手 </div>
+<div id="yu" class="editor yu" contenteditable="true" role="textbox" spellcheck="false">使い勝手 </div>
+<div id="meiryo" class="editor meiryo" contenteditable="true" role="textbox" spellcheck="false">使い勝手 </div>
+<div id="narrow" class="editor narrow" contenteditable="true" role="textbox" spellcheck="false">こんな感じで入力する欄です。<br>使い勝手 </div>
+<script>
+function mirror(){let e=document.activeElement;document.title='LH|'+e.id+'|'+(e.innerText||'').replace(/\n/g,'\\n')+'|END';}
+document.addEventListener('focusin',e=>{if(e.target.isContentEditable){let r=document.createRange();r.selectNodeContents(e.target);r.collapse(false);let s=getSelection();s.removeAllRanges();s.addRange(r);e.target.scrollIntoView({block:'center'});mirror();}});
+document.addEventListener('input',mirror);document.getElementById('dark').focus();
+</script></html>

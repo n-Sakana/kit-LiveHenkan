@@ -2,7 +2,7 @@
 # Reads Word settings and compares delivery paths in a new document. Does not change settings or use the clipboard.
 . (Join-Path $PSScriptRoot 'TestLib.ps1')
 Initialize-Tests
-$D=[LiveHenkan.Tests.Driver]
+$D=[Henkan.Tests.Driver]
 $rows=New-Object System.Collections.Generic.List[object]
 $app=$null;$resident=$null;$options=$null
 $userDir=Join-Path $script:Results 'word-case-probe-user'
@@ -22,8 +22,8 @@ try {
  $word=$app.State.Word
  $options=[ordered]@{CorrectSentenceCaps=$word.AutoCorrect.CorrectSentenceCaps;CorrectInitialCaps=$word.AutoCorrect.CorrectInitialCaps;ReplaceText=$word.AutoCorrect.ReplaceText;LanguageId=$word.Selection.LanguageID}
  # Same unicode keystroke delivery as the product, with no resident and no F10.
- Blank;Front;[LiveHenkan.Native]::SendText($text,[LiveHenkan.Native]::OwnMark);Record 'unicode without resident'
- Blank;Front;$D::Type('api',25);[LiveHenkan.Native]::SendText($text.Substring(3),[LiveHenkan.Native]::OwnMark);Record 'ordinary ASCII followed by Japanese without resident'
+ Blank;Front;[Henkan.Native]::SendText($text,[Henkan.Native]::OwnMark);Record 'unicode without resident'
+ Blank;Front;$D::Type('api',25);[Henkan.Native]::SendText($text.Substring(3),[Henkan.Native]::OwnMark);Record 'ordinary ASCII followed by Japanese without resident'
  $resident=Start-Resident -Root $script:Repo -ModelDir (Get-TestModelDir $ModelDir) -UserDir $userDir
  Start-Sleep -Milliseconds 1800
  # Compare conversion before and after language learning.

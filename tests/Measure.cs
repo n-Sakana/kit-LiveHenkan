@@ -5,7 +5,7 @@ using System.Text;
 using System.Diagnostics;
 using System.Collections.Generic;
 
-namespace LiveHenkan.Tests {
+namespace Henkan.Tests {
  public sealed class Sentence { public string Reading; public string[] Accept; public string Got; public bool Ok; }
  public sealed class Timing { public string Name; public int N; public double Median,P95,Max; }
  public static class Measure {

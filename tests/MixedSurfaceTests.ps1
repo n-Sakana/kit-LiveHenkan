@@ -2,7 +2,7 @@
 # Self-created application only; no clipboard, installation or user documents.
 . (Join-Path $PSScriptRoot 'TestLib.ps1')
 Initialize-Tests
-$D=[LiveHenkan.Tests.Driver]
+$D=[Henkan.Tests.Driver]
 $checks=New-Object System.Collections.Generic.List[object]
 function Check([string]$name,[bool]$ok,[string]$detail=''){$checks.Add([pscustomobject]@{Name=$name;Ok=$ok;Detail=$detail});("{0} {1} {2}" -f $(if($ok){'ok  '}else{'FAIL'}),$name,$detail)}
 function Front {if($D::Foreground() -ne $app.Hwnd){throw 'Test window lost focus; input stopped.'}}

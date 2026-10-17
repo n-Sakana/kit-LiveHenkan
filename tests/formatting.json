@@ -1,0 +1,412 @@
+[
+  {
+    "input": "2026/10/17",
+    "expected": "2026/10/17（土）",
+    "left": ""
+  },
+  {
+    "input": "２０２６／１０／１７",
+    "expected": "2026/10/17（土）",
+    "left": ""
+  },
+  {
+    "input": "2026-10-18",
+    "expected": "2026/10/18（日）",
+    "left": ""
+  },
+  {
+    "input": "２０２６年１０月１７日",
+    "expected": "2026/10/17（土）",
+    "left": ""
+  },
+  {
+    "input": "10月18日",
+    "expected": "2026/10/18（日）",
+    "left": ""
+  },
+  {
+    "input": "2024/2/29",
+    "expected": "2024/2/29（木）",
+    "left": ""
+  },
+  {
+    "input": "1900/2/29",
+    "expected": "1900/2/29",
+    "left": ""
+  },
+  {
+    "input": "2000/2/29",
+    "expected": "2000/2/29（火）",
+    "left": ""
+  },
+  {
+    "input": "2025/2/29",
+    "expected": "2025/2/29",
+    "left": ""
+  },
+  {
+    "input": "2026/4/31",
+    "expected": "2026/4/31",
+    "left": ""
+  },
+  {
+    "input": "2026/13/1",
+    "expected": "2026/13/1",
+    "left": ""
+  },
+  {
+    "input": "2026/0/1",
+    "expected": "2026/0/1",
+    "left": ""
+  },
+  {
+    "input": "2026/1/0",
+    "expected": "2026/1/0",
+    "left": ""
+  },
+  {
+    "input": "2月29日",
+    "expected": "2月29日",
+    "left": ""
+  },
+  {
+    "input": "2026/10/17（月）",
+    "expected": "2026/10/17（土）",
+    "left": ""
+  },
+  {
+    "input": "2026/10/17（土）",
+    "expected": "2026/10/17（土）",
+    "left": ""
+  },
+  {
+    "input": "2026/10/17（曜日未定）",
+    "expected": "2026/10/17（曜日未定）",
+    "left": ""
+  },
+  {
+    "input": "2026/10/17(予定)",
+    "expected": "2026/10/17(予定)",
+    "left": ""
+  },
+  {
+    "input": "2026-10-17T09:05:00Z",
+    "expected": "2026-10-17T09:05:00Z",
+    "left": ""
+  },
+  {
+    "input": "10/17",
+    "expected": "10/17",
+    "left": ""
+  },
+  {
+    "input": "20261017",
+    "expected": "20261017",
+    "left": ""
+  },
+  {
+    "input": "26/10/17",
+    "expected": "26/10/17",
+    "left": ""
+  },
+  {
+    "input": "令和8年10月17日",
+    "expected": "令和8年10月17日",
+    "left": ""
+  },
+  {
+    "input": "ID:2026/10/17",
+    "expected": "ID:2026/10/17",
+    "left": ""
+  },
+  {
+    "input": "IDは2026/10/17",
+    "expected": "IDは2026/10/17",
+    "left": ""
+  },
+  {
+    "input": "ユーザーIDは2026/10/17",
+    "expected": "ユーザーIDは2026/10/17",
+    "left": ""
+  },
+  {
+    "input": "コード2026/10/17",
+    "expected": "コード2026/10/17",
+    "left": ""
+  },
+  {
+    "input": "注文番号1234件",
+    "expected": "注文番号1234件",
+    "left": ""
+  },
+  {
+    "input": "型番1234台",
+    "expected": "型番1234台",
+    "left": ""
+  },
+  {
+    "input": "会員番号：1234個",
+    "expected": "会員番号：1234個",
+    "left": ""
+  },
+  {
+    "input": "9:05",
+    "expected": "09:05",
+    "left": ""
+  },
+  {
+    "input": "９：０５",
+    "expected": "09:05",
+    "left": ""
+  },
+  {
+    "input": "23:59",
+    "expected": "23:59",
+    "left": ""
+  },
+  {
+    "input": "24:00",
+    "expected": "24:00",
+    "left": ""
+  },
+  {
+    "input": "9:75",
+    "expected": "9:75",
+    "left": ""
+  },
+  {
+    "input": "午後3時半",
+    "expected": "15:30",
+    "left": ""
+  },
+  {
+    "input": "午前12時",
+    "expected": "00:00",
+    "left": ""
+  },
+  {
+    "input": "午後12時",
+    "expected": "12:00",
+    "left": ""
+  },
+  {
+    "input": "午前0時",
+    "expected": "00:00",
+    "left": ""
+  },
+  {
+    "input": "午後0時",
+    "expected": "午後0時",
+    "left": ""
+  },
+  {
+    "input": "午後13時",
+    "expected": "午後13時",
+    "left": ""
+  },
+  {
+    "input": "15時5分",
+    "expected": "15:05",
+    "left": ""
+  },
+  {
+    "input": "９時",
+    "expected": "09:00",
+    "left": ""
+  },
+  {
+    "input": "3時台",
+    "expected": "3時台",
+    "left": ""
+  },
+  {
+    "input": "3時代",
+    "expected": "3時代",
+    "left": ""
+  },
+  {
+    "input": "3時間",
+    "expected": "3時間",
+    "left": ""
+  },
+  {
+    "input": "3時30分間",
+    "expected": "3時30分間",
+    "left": ""
+  },
+  {
+    "input": "12:30:45",
+    "expected": "12:30:45",
+    "left": ""
+  },
+  {
+    "input": "スコア12:30",
+    "expected": "スコア12:30",
+    "left": ""
+  },
+  {
+    "input": "比率9:05",
+    "expected": "比率9:05",
+    "left": ""
+  },
+  {
+    "input": "930",
+    "expected": "930",
+    "left": ""
+  },
+  {
+    "input": "9:5",
+    "expected": "9:5",
+    "left": ""
+  },
+  {
+    "input": "1234円",
+    "expected": "1,234円",
+    "left": ""
+  },
+  {
+    "input": "１２３４円",
+    "expected": "1,234円",
+    "left": ""
+  },
+  {
+    "input": "1234.50円",
+    "expected": "1,234.50円",
+    "left": ""
+  },
+  {
+    "input": "１２３４．５０円",
+    "expected": "1,234.50円",
+    "left": ""
+  },
+  {
+    "input": "－１０００円",
+    "expected": "-1,000円",
+    "left": ""
+  },
+  {
+    "input": "−1234円",
+    "expected": "-1,234円",
+    "left": ""
+  },
+  {
+    "input": "-0.50円",
+    "expected": "-0.50円",
+    "left": ""
+  },
+  {
+    "input": "0007円",
+    "expected": "0007円",
+    "left": ""
+  },
+  {
+    "input": "1,234円",
+    "expected": "1,234円",
+    "left": ""
+  },
+  {
+    "input": "１，２３４円",
+    "expected": "1,234円",
+    "left": ""
+  },
+  {
+    "input": "12,34円",
+    "expected": "12,34円",
+    "left": ""
+  },
+  {
+    "input": "12345.67kg",
+    "expected": "12,345.67kg",
+    "left": ""
+  },
+  {
+    "input": "１２．５％",
+    "expected": "12.5%",
+    "left": ""
+  },
+  {
+    "input": "1000000人",
+    "expected": "1,000,000人",
+    "left": ""
+  },
+  {
+    "input": "1234567890123456円",
+    "expected": "1234567890123456円",
+    "left": ""
+  },
+  {
+    "input": "1234",
+    "expected": "1234",
+    "left": ""
+  },
+  {
+    "input": "001234",
+    "expected": "001234",
+    "left": ""
+  },
+  {
+    "input": "090-1234-5678",
+    "expected": "090-1234-5678",
+    "left": ""
+  },
+  {
+    "input": "https://example.com/2026/10/17",
+    "expected": "https://example.com/2026/10/17",
+    "left": ""
+  },
+  {
+    "input": "sample1234@example.com",
+    "expected": "sample1234@example.com",
+    "left": ""
+  },
+  {
+    "input": "C:\\2026\\10\\17",
+    "expected": "C:\\2026\\10\\17",
+    "left": ""
+  },
+  {
+    "input": "`1234円`",
+    "expected": "`1234円`",
+    "left": ""
+  },
+  {
+    "input": "=SUM(A1:A10)",
+    "expected": "=SUM(A1:A10)",
+    "left": ""
+  },
+  {
+    "input": "今日は晴れです",
+    "expected": "今日は晴れです",
+    "left": ""
+  },
+  {
+    "input": "なおす予定です",
+    "expected": "なおす予定です",
+    "left": ""
+  },
+  {
+    "input": "会議は2026/10/19の午後3時からです",
+    "expected": "会議は2026/10/19（月）の15:00からです",
+    "left": ""
+  },
+  {
+    "input": "費用は１２３４円です",
+    "expected": "費用は1,234円です",
+    "left": ""
+  },
+  {
+    "input": "10月18日の9:05に10000円を支払います",
+    "expected": "2026/10/18（日）の09:05に10,000円を支払います",
+    "left": ""
+  },
+  {
+    "input": "2026/10/17",
+    "expected": "2026/10/17",
+    "left": "ID:"
+  },
+  {
+    "input": "1234円",
+    "expected": "1234円",
+    "left": "型番は"
+  }
+]

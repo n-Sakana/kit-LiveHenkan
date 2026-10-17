@@ -6,7 +6,7 @@ using System.Diagnostics;
 using System.Collections.Generic;
 using System.Collections.Concurrent;
 
-namespace LiveHenkan.Tests {
+namespace Henkan.Tests {
  public sealed class Headless : IHost, IDisposable {
   public readonly Composer Composer; public readonly Converter Converter; public readonly Jinen.Engine Engine; public readonly Settings Settings=new Settings();
   public readonly StringBuilder Document=new StringBuilder(); public readonly List<string> Commits=new List<string>(),Views=new List<string>(),Injected=new List<string>();

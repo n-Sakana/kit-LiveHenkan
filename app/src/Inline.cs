@@ -8,7 +8,7 @@ using System.Diagnostics;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
 
-namespace LiveHenkan {
+namespace Henkan {
  public struct LineBox { public int Left,Right,Top,Bottom; }
  // Where the uncommitted text and the stretch in focus sit on the screen, one box per line.
  public sealed class InlineGeometry {

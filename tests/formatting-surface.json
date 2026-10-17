@@ -1,0 +1,10 @@
+[
+ {"keys":"2026/10/17","shown":"2026/10/17（土）","expected":"2026/10/17（土）"},
+ {"keys":"2026/10/17","shown":"2026/10/17（土）","action":"original","expected":"2026／10／17"},
+ {"keys":"1234.50enn","shown":"1,234.50円","expected":"1,234.50円"},
+ {"keys":"1234enn","shown":"1,234円","action":"original","expected":"1234円"},
+ {"keys":"gogo3jihann","shown":"15:30","expected":"15:30"},
+ {"keys":"gogo3jihann","shown":"15:30","action":"original","expected":"午後3時半"},
+ {"keys":"2026/10/17","shown":"2026/10/17（土）","action":"backspace","expected":"2026/10/1（木）"},
+ {"keys":"2026/10/17","shown":"2026/10/17（土）","action":"cancel","expected":""}
+]

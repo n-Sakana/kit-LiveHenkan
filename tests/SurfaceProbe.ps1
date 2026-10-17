@@ -2,12 +2,12 @@
 # Each part writes text from outside the way the resident would have to, in a window of the test's own, and shows
 # what that does to the document's undo history. No resident runs. Results go to results\surface-probe.txt.
 . (Join-Path $PSScriptRoot 'TestLib.ps1')
-if(!('LiveHenkan.Tests.FormHost' -as [type])){
+if(!('Henkan.Tests.FormHost' -as [type])){
  $temp=Join-Path $script:Repo 'temp';[IO.Directory]::CreateDirectory($temp)|Out-Null;$env:TEMP=$temp;$env:TMP=$temp
- $null=Build-LiveHenkan -App (Join-Path $script:Repo 'app') -Extra @((Join-Path $PSScriptRoot 'Headless.cs'),(Join-Path $PSScriptRoot 'Driver.cs'),(Join-Path $PSScriptRoot 'FormHost.cs'))
- [LiveHenkan.Native]::PrepareProcess()
+ $null=Build-Henkan -App (Join-Path $script:Repo 'app') -Extra @((Join-Path $PSScriptRoot 'Headless.cs'),(Join-Path $PSScriptRoot 'Driver.cs'),(Join-Path $PSScriptRoot 'FormHost.cs'))
+ [Henkan.Native]::PrepareProcess()
 }
-$D=[LiveHenkan.Tests.Driver]
+$D=[Henkan.Tests.Driver]
 $lines=New-Object System.Collections.Generic.List[string]
 function Say([string]$text){$lines.Add($text);$text}
 $kana=[string][char]0x304B+[char]0x306A;$kanji=[string][char]0x4EEE+[char]0x540D+[char]0x3067
@@ -15,14 +15,14 @@ $kana=[string][char]0x304B+[char]0x306A;$kanji=[string][char]0x4EEE+[char]0x540D
 Say '===== classic edit box (class Edit)'
 $form=$null
 try{
- $form=New-Object LiveHenkan.Tests.FormHost
+ $form=New-Object Henkan.Tests.FormHost
  $null=$D::Activate($form.Hwnd);$form.FocusPlain();Start-Sleep -Milliseconds 300
- [LiveHenkan.Native]::SendText('abc',[LiveHenkan.Native]::OwnMark);Start-Sleep -Milliseconds 300
+ [Henkan.Native]::SendText('abc',[Henkan.Native]::OwnMark);Start-Sleep -Milliseconds 300
  Say ("the user typed abc: text ["+$form.Plain+"] undo available="+$form.PlainCanUndo)
  $form.PlainInsert('X',$false)
  Say ("one insertion that is not to be recorded: text ["+$form.Plain+"] undo available="+$form.PlainCanUndo)
  $form.Clear();$form.FocusPlain()
- [LiveHenkan.Native]::SendText('abc',[LiveHenkan.Native]::OwnMark);Start-Sleep -Milliseconds 300
+ [Henkan.Native]::SendText('abc',[Henkan.Native]::OwnMark);Start-Sleep -Milliseconds 300
  $form.PlainInsert('X',$true);$form.PlainUndo()
  $afterOne=$form.Plain
  $form.PlainUndo()
@@ -38,7 +38,7 @@ try{
  Say ("version "+$w.Version)
  $d.Content.InsertAfter('ABC')
  $u=$w.UndoRecord
- $u.StartCustomRecord('LiveHenkan')
+ $u.StartCustomRecord('Henkan')
  $sw=[Diagnostics.Stopwatch]::StartNew()
  $d.Range(3,3).Text=$kana;$t1=$sw.Elapsed.TotalMilliseconds;$sw.Restart()
  $d.Range(3,5).Text=$kanji;$t2=$sw.Elapsed.TotalMilliseconds
@@ -54,7 +54,7 @@ try{
  $d.Content.Text='ABC'
  $child=@'
 $w=[Runtime.InteropServices.Marshal]::GetActiveObject('Word.Application')
-$w.UndoRecord.StartCustomRecord('LiveHenkan')
+$w.UndoRecord.StartCustomRecord('Henkan')
 $w.ActiveDocument.Range(3,3).Text='zz'
 [Diagnostics.Process]::GetCurrentProcess().Kill()
 '@
@@ -78,15 +78,15 @@ try{
  $target=Open-TestApp 'excel'
  $x=$target.State.Excel
  Say ("version "+$x.Version)
- [LiveHenkan.Native]::SendText('abc',[LiveHenkan.Native]::OwnMark);Start-Sleep -Milliseconds 400
- [LiveHenkan.Native]::SendKey(13,$false,$false,$false,[LiveHenkan.Native]::OwnMark);Start-Sleep -Milliseconds 700
+ [Henkan.Native]::SendText('abc',[Henkan.Native]::OwnMark);Start-Sleep -Milliseconds 400
+ [Henkan.Native]::SendKey(13,$false,$false,$false,[Henkan.Native]::OwnMark);Start-Sleep -Milliseconds 700
  Say ("the user typed abc into A1: A1=["+$x.ActiveSheet.Range('A1').Value2+"] undo available="+$x.CommandBars.FindControl([Type]::Missing,128).Enabled)
  $x.ActiveSheet.Range('C1').Value2='x'
  Start-Sleep -Milliseconds 400
  Say ("after one write through automation: undo available="+$x.CommandBars.FindControl([Type]::Missing,128).Enabled+" (the user's undo history is gone)")
- [LiveHenkan.Native]::SendText('de',[LiveHenkan.Native]::OwnMark);Start-Sleep -Milliseconds 400
+ [Henkan.Native]::SendText('de',[Henkan.Native]::OwnMark);Start-Sleep -Milliseconds 400
  try{$x.ActiveSheet.Range('D1').Value2='y';Say 'a write while a cell is being edited: accepted'}catch{Say 'a write while a cell is being edited: refused'}
- [LiveHenkan.Native]::SendKey(27,$false,$false,$false,[LiveHenkan.Native]::OwnMark);Start-Sleep -Milliseconds 400
+ [Henkan.Native]::SendKey(27,$false,$false,$false,[Henkan.Native]::OwnMark);Start-Sleep -Milliseconds 400
 }catch{Say ("FAILED: "+($_|Out-String))}
 finally{Close-TestApp $target}
 $lines.Add('at '+(Get-Date).ToString('s'))

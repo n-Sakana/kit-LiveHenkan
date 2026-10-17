@@ -11,7 +11,7 @@ using System.Windows.Media.Animation;
 using System.Windows.Shapes;
 using System.Windows.Threading;
 
-namespace LiveHenkan {
+namespace Henkan {
  // Shared colours, type and radii for the dark theme.
  public static class Theme {
   public static Color Hex(string s){return (Color)ColorConverter.ConvertFromString(s);}
@@ -54,7 +54,7 @@ namespace LiveHenkan {
   StyleInfo currentStyle;int styleSession=-1;
   readonly DispatcherTimer fallback=new DispatcherTimer(),hold=new DispatcherTimer();
   public bool Composing; readonly DoubleAnimationUsingKeyFrames blink;
-  public string Inspect(){return "visible="+IsVisible+"\tx="+placedX+"\ty="+placedY+"\theight="+placedHeight+"\tfont="+text.FontFamily.Source+"\tfontDip="+text.FontSize.ToString(System.Globalization.CultureInfo.InvariantCulture)+"\tscale="+Scale.ToString(System.Globalization.CultureInfo.InvariantCulture)+"\tanchor="+anchor.Found+"\tsource="+anchor.Source;}
+  public string Inspect(){return "visible="+IsVisible+"\tx="+placedX+"\ty="+placedY+"\theight="+placedHeight+"\tfont="+text.FontFamily.Source+"\tfontDip="+text.FontSize.ToString(System.Globalization.CultureInfo.InvariantCulture)+"\tweight="+text.FontWeight.ToOpenTypeWeight()+"\titalic="+(text.FontStyle==FontStyles.Italic)+"\tscale="+Scale.ToString(System.Globalization.CultureInfo.InvariantCulture)+"\tanchor="+anchor.Found+"\tsource="+anchor.Source;}
 
   public OverlayWindow(){
    StackPanel row=new StackPanel{Orientation=Orientation.Horizontal};
@@ -109,23 +109,18 @@ namespace LiveHenkan {
    inline=false;
    Paint(Theme.Surface,Theme.Ink,Theme.Accent);
    frame.BorderBrush=Theme.Brush(Theme.Edge);frame.BorderThickness=new Thickness(1);frame.CornerRadius=new CornerRadius(Theme.RadiusControl);frame.Padding=new Thickness(10,6,10,7);
-   text.FontFamily=Theme.Font;text.FontSize=16;text.FontWeight=FontWeights.Normal;text.LineHeight=double.NaN;text.LineStackingStrategy=LineStackingStrategy.MaxHeight;
+   text.FontFamily=Theme.Font;text.FontSize=16;text.FontWeight=FontWeights.Normal;text.FontStyle=FontStyles.Normal;text.LineHeight=double.NaN;text.LineStackingStrategy=LineStackingStrategy.MaxHeight;
+   text.Background=null;TextOptions.SetTextRenderingMode(text,TextRenderingMode.Grayscale);RenderOptions.SetClearTypeHint(text,ClearTypeHint.Auto);
    TextOptions.SetTextFormattingMode(text,TextFormattingMode.Display);
    under.BorderThickness=new Thickness(0,0,0,UnderWidth);under.Padding=new Thickness(0,0,0,UnderGap+1);
    endCaret.Height=20;endCaret.Margin=new Thickness(1,0,0,UnderGap+1+UnderWidth);
-  }
-  static string JapaneseFallback(string name){
-   string n=name.ToLowerInvariant();
-   if(n.Contains("consolas")||n.Contains("courier")||n.Contains("cascadia")||n.Contains("lucida console")||n.Contains("mono"))return "MS Gothic";
-   if(n.Contains("mincho")||n.Contains("明朝")||n.Contains("serif")||n.Contains("times")||n.Contains("century"))return "Yu Mincho";
-   return "Yu Gothic UI";
   }
   // Dresses the text like the document around the caret, so it reads as if it were already in it.
   void StyleInline(CaretInfo c,StyleInfo style){
    inline=true;
    double scale=Scale,caretDip=c.Height/scale,fontDip;FontFamily family;bool known=style!=null&&style.FontName!=null;
    if(known){
-    family=new FontFamily(style.FontName+", "+JapaneseFallback(style.FontName)+", Yu Gothic UI");
+    family=DocumentFonts.Family(style);
     double spacing=1.2;try{spacing=new FontFamily(style.FontName).LineSpacing;}catch{}
     fontDip=CaretGeometry.FontDip(style,caretDip,spacing);
     lineDip=fontDip*spacing;
@@ -143,9 +138,18 @@ namespace LiveHenkan {
    Color ink=known&&style.Ink>=0&&Theme.IsLight(Theme.Rgb(style.Ink))!=light?Theme.Rgb(style.Ink):(light?Theme.Hex("#111111"):Theme.Hex("#F2F2F2"));
    Paint(back,ink,light?Theme.AccentOnLight:Theme.Accent);
    // Room above the caret is taken only when the glyphs are taller than the caret itself.
-   padTop=lineDip>caretDip+0.5?2:0;
+   // A browser caret already locates the text line. Its reported height can
+   // change with the preceding glyph; extra padding must not move that line.
+   padTop=known&&style.Web&&!DocumentFonts.HasJapanese(style.FontName)?0:(lineDip>caretDip+0.5?2:0);
    frame.BorderBrush=null;frame.BorderThickness=new Thickness(0);frame.CornerRadius=new CornerRadius(0);frame.Padding=new Thickness(0,padTop,1,0);
-   text.FontFamily=family;text.FontSize=fontDip;text.FontWeight=known&&style.Bold?FontWeights.Bold:FontWeights.Normal;
+   text.FontFamily=family;text.FontSize=fontDip;text.FontWeight=known?FontWeight.FromOpenTypeWeight(style.Weight):FontWeights.Normal;
+   text.FontStyle=known&&style.Italic?FontStyles.Italic:FontStyles.Normal;
+   // Chromium's Latin-primary/Japanese-fallback text uses ClearType on an opaque
+   // editor background. Explicitly supply that background even in our layered window.
+   bool webFallback=known&&style.Web&&!DocumentFonts.HasJapanese(style.FontName);
+   text.Background=webFallback?Theme.Brush(back):null;
+   TextOptions.SetTextRenderingMode(text,webFallback?TextRenderingMode.ClearType:TextRenderingMode.Grayscale);
+   RenderOptions.SetClearTypeHint(text,webFallback?ClearTypeHint.Enabled:ClearTypeHint.Auto);
    text.LineHeight=lineDip;text.LineStackingStrategy=LineStackingStrategy.BlockLineHeight;
    TextOptions.SetTextFormattingMode(text,TextFormattingMode.Ideal);
    under.BorderThickness=new Thickness(0,0,0,UnderWidth);under.Padding=new Thickness(0,0,0,UnderGap);

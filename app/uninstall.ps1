@@ -9,7 +9,7 @@ $ErrorActionPreference = 'Stop'
 
 # ---- App section ----
 # BeforeRemove / AfterRemove run only when the chosen registration is this app's own verb.
-$script:OwnKey = 'LiveHenkan'
+$script:OwnKey = 'Henkan'
 $script:BeforeRemove = {
     # The resident would keep running without its menu; stop it first, as before.
     . (Join-Path $PSScriptRoot 'Common.ps1')

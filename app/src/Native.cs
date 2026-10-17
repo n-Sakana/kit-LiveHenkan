@@ -4,7 +4,7 @@ using System.Text;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
 
-namespace LiveHenkan {
+namespace Henkan {
  // Pure geometry rules are shared by the probe and the headless regression tests.
  public static class CaretGeometry {
   public static bool IsCaretRectangle(System.Windows.Rect rect){return !rect.IsEmpty&&rect.Width<=4&&rect.Height>0&&rect.Height<=1000;}
@@ -27,7 +27,10 @@ namespace LiveHenkan {
 
  // What the application says about the text at the caret. Colours are 0xRRGGBB, -1 when unknown.
  public sealed class StyleInfo {
-  public string FontName; public double SizePoints; public int Ink=-1,Back=-1; public bool Bold;
+  public string FontName; public double SizePoints; public int Ink=-1,Back=-1;
+  public int Weight=400; public bool Italic,Web;
+  public bool Bold{get{return Weight>=600;}set{Weight=value?700:400;}}
+  public void ReadWeight(object value){if(value is int&&(int)value>=1&&(int)value<=999)Weight=(int)value;}
  }
 
  public static class Native {

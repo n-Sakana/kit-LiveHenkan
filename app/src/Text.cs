@@ -4,7 +4,7 @@ using System.IO;
 using System.Text;
 using System.Collections.Generic;
 
-namespace LiveHenkan {
+namespace Henkan {
  public static class Kana {
   public static bool IsHiragana(char c){return (c>='ぁ'&&c<='ゖ')||c=='ゝ'||c=='ゞ';}
   public static bool IsKatakana(char c){return (c>='ァ'&&c<='ヺ')||c=='ヽ'||c=='ヾ';}
